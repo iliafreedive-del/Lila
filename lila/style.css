@@ -188,3 +188,43 @@ blockquote { margin: 12px 0; padding: 10px 14px; border-left: 3px solid var(--ac
 .tk .tkimg { width: 36px; height: 36px; margin: 0 auto; }
 .thumb { position: relative; width: 100%; aspect-ratio: 9 / 8; border-radius: 6px; overflow: hidden; }
 .thumb svg, .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* Карусель оформления */
+dialog.full { max-width: 760px; }
+@media (max-width: 600px) { dialog.full { width: 100%; max-width: 100%; max-height: 100%; height: 100%; border-radius: 0; margin: 0; padding: 14px; } }
+.tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.tab { flex: 1; font-size: 17px; }
+.tab.sel { background: var(--accent); color: #2a1a05; border-color: var(--accent); }
+.car { position: relative; }
+.car-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 12px; }
+.car-track::-webkit-scrollbar { display: none; }
+.car-item { flex: 0 0 100%; scroll-snap-align: center; display: grid; place-items: center; padding: 4px; }
+.big-thumb { width: 100%; max-width: min(100%, calc(60vh * 9 / 8)); }
+.big-thumb .thumb { border-radius: 12px; box-shadow: 0 6px 24px #0008; }
+.big-die { height: min(60vw, 260px); display: grid; place-items: center; }
+.big-die .die { transform: scale(2.6); }
+.car-btn {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+  width: 48px; height: 48px; border-radius: 50%; font-size: 30px; line-height: 1; padding: 0;
+  background: rgba(0,0,0,.55); color: #fff; border: 1px solid #fff5;
+}
+.car-btn.prev { left: 6px; } .car-btn.next { right: 6px; }
+.car-info { display: flex; justify-content: space-between; align-items: baseline; margin: 12px 4px; }
+.car-name { font-size: 22px; color: var(--accent); font-weight: normal; }
+.car-count { color: var(--muted); }
+
+/* Фишки лентами */
+#tokenGrid .tokens { display: flex; overflow-x: auto; gap: 10px; padding: 4px 2px 10px; scroll-snap-type: x proximity; }
+#tokenGrid .tk { flex: 0 0 68px; height: 68px; font-size: 40px; scroll-snap-align: start; border-radius: 14px; }
+#tokenGrid .tk .tkimg { width: 54px; height: 54px; }
+
+/* Крестик закрытия */
+dialog { position: fixed; }
+.x-close {
+  position: sticky; top: 0; float: right; z-index: 5; margin: -6px -6px 0 8px;
+  width: 52px; height: 52px; border-radius: 50%; padding: 0; font-size: 26px; line-height: 1;
+  background: rgba(0,0,0,.6); color: #fff; border: 2px solid var(--accent);
+}
+.x-close:hover { background: var(--accent); color: #2a1a05; }
+dialog#setup .x-close { display: none; }
+@media (max-width: 600px) { dialog.card { font-size: 17px; } }

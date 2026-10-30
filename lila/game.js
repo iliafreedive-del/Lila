@@ -81,7 +81,7 @@ function buildBoard() {
   }
   board.innerHTML = `<svg class="art" viewBox="0 0 900 800" preserveAspectRatio="none">${artSvg(t)}</svg>${boardImg(t)}
     <div class="grid">${cells}</div>${overlaySvg(t)}`;
-  board.querySelectorAll(".cell").forEach((el) => (el.onclick = () => showCell(+el.dataset.n)));
+  board.querySelectorAll(".cell").forEach((el) => (el.onclick = () => openCard(+el.dataset.n)));
 }
 
 function overlaySvg(t) {
@@ -409,22 +409,55 @@ function themeThumb(t) {
     <svg viewBox="0 0 900 800" preserveAspectRatio="none">${cells}</svg></div>`;
 }
 
-function openLook() {
-  $("themeGrid").innerHTML = THEMES.map((t) => `
-    <button type="button" class="swatch${t.id === prefs.theme ? " sel" : ""}" data-id="${t.id}" style="border-color:${t.border || t.accent}">
-      ${themeThumb(t)}<span>${t.name}</span></button>`).join("");
-  $("diceGrid").innerHTML = DICE_SKINS.map((d) => `
-    <button type="button" class="dswatch${d.id === prefs.dice ? " sel" : ""}" data-id="${d.id}">${dieHtml(5, d)}<span>${d.name}</span></button>`).join("");
-  $("themeGrid").querySelectorAll(".swatch").forEach((b) => (b.onclick = () => {
-    prefs.theme = b.dataset.id; savePrefs(); buildBoard(); render();
-    $("themeGrid").querySelectorAll(".swatch").forEach((x) => x.classList.toggle("sel", x === b));
-  }));
-  $("diceGrid").querySelectorAll(".dswatch").forEach((b) => (b.onclick = () => {
-    prefs.dice = b.dataset.id; savePrefs(); showDie(state.lastRoll || 6);
-    $("diceGrid").querySelectorAll(".dswatch").forEach((x) => x.classList.toggle("sel", x === b));
-  }));
-  $("look").showModal();
+// Карусель: один вариант на весь экран, листается свайпом или стрелками
+function carousel(el, items, current, render, onPick) {
+  el.innerHTML = `<div class="car">
+      <button type="button" class="car-btn prev" aria-label="Назад">‹</button>
+      <div class="car-track">${items.map((it) => `<div class="car-item">${render(it)}</div>`).join("")}</div>
+      <button type="button" class="car-btn next" aria-label="Вперёд">›</button>
+    </div>
+    <div class="car-info"><b class="car-name"></b><span class="car-count"></span></div>`;
+  const track = el.querySelector(".car-track");
+  let idx = current;
+  const show = () => {
+    el.querySelector(".car-name").textContent = items[idx].name;
+    el.querySelector(".car-count").textContent = `${idx + 1} из ${items.length}`;
+  };
+  const go = (i, smooth = true) => {
+    idx = (i + items.length) % items.length;
+    track.scrollTo({ left: idx * track.clientWidth, behavior: smooth ? "smooth" : "auto" });
+    show(); onPick(items[idx]);
+  };
+  el.querySelector(".prev").onclick = () => go(idx - 1);
+  el.querySelector(".next").onclick = () => go(idx + 1);
+  let t = null;
+  track.onscroll = () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const i = Math.round(track.scrollLeft / track.clientWidth);
+      if (i !== idx && i >= 0 && i < items.length) { idx = i; show(); onPick(items[idx]); }
+    }, 120);
+  };
+  show();
+  requestAnimationFrame(() => (track.scrollLeft = idx * track.clientWidth));
+  return { refresh: () => (track.scrollLeft = idx * track.clientWidth) };
 }
+
+let cars = {};
+function openLook() {
+  $("look").showModal();
+  cars.themeCar = carousel($("themeCar"), THEMES, Math.max(0, THEMES.findIndex((t) => t.id === prefs.theme)),
+    (t) => `<div class="big-thumb">${themeThumb(t)}</div>`,
+    (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); buildBoard(); render(); } });
+  cars.diceCar = carousel($("diceCar"), DICE_SKINS, Math.max(0, DICE_SKINS.findIndex((d) => d.id === prefs.dice)),
+    (d) => `<div class="big-die">${dieHtml(5, d)}</div>`,
+    (d) => { if (prefs.dice !== d.id) { prefs.dice = d.id; savePrefs(); showDie(state.lastRoll || 6); } });
+}
+document.querySelectorAll("#look .tab").forEach((b) => (b.onclick = () => {
+  document.querySelectorAll("#look .tab").forEach((x) => x.classList.toggle("sel", x === b));
+  ["themeCar", "diceCar"].forEach((id) => ($(id).hidden = id !== b.dataset.tab));
+  cars[b.dataset.tab] && cars[b.dataset.tab].refresh();
+}));
 
 /* ---------- Новая игра ---------- */
 
@@ -466,6 +499,14 @@ function openSetup() {
   drawNameFields();
   $("setup").showModal();
 }
+
+// Большой крестик закрытия во всех окнах
+document.querySelectorAll("dialog").forEach((d) => {
+  const x = document.createElement("button");
+  x.type = "button"; x.className = "x-close"; x.setAttribute("aria-label", "Закрыть"); x.textContent = "✕";
+  x.onclick = () => d.close();
+  d.prepend(x);
+});
 
 $("btnRoll").onclick = roll;
 $("btnNew").onclick = openSetup;

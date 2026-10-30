@@ -62,19 +62,21 @@
   </form>
 </dialog>
 
-<dialog id="look" class="wide">
+<dialog id="look" class="wide full">
   <form method="dialog">
     <h2>Оформление</h2>
-    <h3>Поле</h3>
-    <div id="themeGrid" class="theme-grid"></div>
-    <h3>Кубик</h3>
-    <div id="diceGrid" class="dice-grid"></div>
-    <p class="hint">Фишку игрока можно сменить, нажав на его имя в списке игроков.</p>
+    <div class="tabs">
+      <button type="button" class="tab sel" data-tab="themeCar">Поле</button>
+      <button type="button" class="tab" data-tab="diceCar">Кубик</button>
+    </div>
+    <div id="themeCar" class="car-wrap"></div>
+    <div id="diceCar" class="car-wrap" hidden></div>
+    <p class="hint">Листайте влево и вправо, выбор применяется сразу. Фишку игрока можно сменить, нажав на его имя в списке игроков.</p>
     <button class="roll">Готово</button>
   </form>
 </dialog>
 
-<dialog id="tokens" class="wide">
+<dialog id="tokens" class="wide full">
   <form method="dialog">
     <h2>Выберите фишку</h2>
     <div id="tokenGrid"></div>
@@ -82,7 +84,7 @@
   </form>
 </dialog>
 
-<dialog id="card" class="wide card">
+<dialog id="card" class="wide card full">
   <form method="dialog">
     <div id="cardBody"></div>
     <label class="note-label">Мои мысли (сохранятся в «Моём пути»)
@@ -93,7 +95,7 @@
   </form>
 </dialog>
 
-<dialog id="pathDlg" class="wide">
+<dialog id="pathDlg" class="wide full">
   <form method="dialog">
     <h2>Мой путь</h2>
     <div id="pathBody"></div>
@@ -105,7 +107,7 @@
   </form>
 </dialog>
 
-<dialog id="rules">
+<dialog id="rules" class="full">
   <form method="dialog">
     <h2>Правила</h2>
     <p>Лила — древняя индийская игра самопознания. Поле из 72 клеток — это карта состояний сознания. Цель — клетка 68, «Космическое сознание».</p>
