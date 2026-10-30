@@ -170,8 +170,10 @@ function showCell(n) {
 
 /* ---------- Карточка клетки ---------- */
 
+const intentOf = (i) => (state.players[i] && state.players[i].intention) || state.intention || "";
+
 let cardCtx = null;
-function cardHtml(n, viaCell) {
+function cardHtml(n, viaCell, pi) {
   const [name, sk, short] = CELLS[n];
   const m = MEANINGS[n] || {};
   const para = (t) => (t || "").split(/\n+/).filter(Boolean).map((x) => `<p>${esc(x)}</p>`).join("");
@@ -192,14 +194,14 @@ function cardHtml(n, viaCell) {
     <h4>Вопросы к себе</h4><ul class="qs">
       <li>Прежде чем читать дальше: что слово «${esc(name)}» значит лично для тебя? Что первое приходит на ум?</li>
       ${(m.questions || []).map((q) => `<li>${esc(q)}</li>`).join("")}
-      ${state.intention ? `<li class="bridge">Как эта клетка связана с моим намерением: «${esc(state.intention)}»?</li>` : ""}
+      ${intentOf(pi) ? `<li class="bridge">Как эта клетка связана с моим намерением: «${esc(intentOf(pi))}»?</li>` : ""}
     </ul>
     <p class="hint">Не на все вопросы нужно отвечать. Возьми тот, что откликается сильнее всего.</p>
     ${m.practice ? `<h4>Практика</h4>${para(m.practice)}` : ""}`;
 }
-function openCard(n, logIdx = null, viaCell = null) {
+function openCard(n, logIdx = null, viaCell = null, pi = state.turn) {
   cardCtx = { n, logIdx };
-  $("cardBody").innerHTML = cardHtml(n, viaCell);
+  $("cardBody").innerHTML = cardHtml(n, viaCell, pi);
   const note = logIdx !== null ? (state.notes || {})[logIdx] : null;
   $("cardNote").value = note || "";
   $("cardNote").parentElement.style.display = logIdx !== null ? "" : "none";
@@ -221,7 +223,7 @@ $("autoCard").onchange = () => { prefs.autoCard = $("autoCard").checked; savePre
 
 const strip = (h) => { const d = document.createElement("div"); d.innerHTML = h; return d.textContent; };
 function pathText() {
-  let t = "ЛИЛА — мой путь\n" + (state.intention ? "Намерение: " + state.intention + "\n" : "") + "\n";
+  let t = "ЛИЛА — мой путь\n" + state.players.map((p, i) => intentOf(i) ? `Намерение (${p.name}): ${intentOf(i)}\n` : "").join("") + "\n";
   state.log.forEach((l, i) => {
     t += (i + 1) + ". " + strip(l) + "\n";
     if (state.notes && state.notes[i]) t += "   ✎ " + state.notes[i] + "\n";
@@ -230,7 +232,7 @@ function pathText() {
 }
 function openPath() {
   const notes = state.notes || {};
-  $("pathBody").innerHTML = (state.intention ? `<p class="hook">Намерение: ${esc(state.intention)}</p>` : "") +
+  $("pathBody").innerHTML = state.players.map((p, i) => intentOf(i) ? `<p class="hook">${p.token} ${esc(p.name)}: ${esc(intentOf(i))}</p>` : "").join("") +
     (state.log.length ? `<ol class="path">${state.log.map((l, i) => `<li>${l}${notes[i] ? `<div class="pnote">✎ ${esc(notes[i])}</div>` : ""}</li>`).join("")}</ol>`
       : "<p>Путь ещё не начался. Бросьте кубик.</p>");
   $("pathDlg").showModal();
@@ -264,7 +266,9 @@ function render() {
   });
   if (cur.pos > 0) $("c" + cur.pos).classList.add("here");
 
-  $("intention").textContent = state.intention ? "Намерение: " + state.intention : "";
+  const ci = intentOf(state.turn);
+  $("intention").innerHTML = `<span class="intent-who">${cur.token} Намерение ${state.players.length > 1 ? esc(cur.name) : ""}</span>
+    ${ci ? esc(ci) : "<i>не задано</i>"} <span class="intent-edit">✎ изменить</span>`;
   $("players").innerHTML = state.players.map((pl, i) => `
     <div class="player ${i === state.turn && !state.over ? "active" : ""}" data-i="${i}" title="Нажмите, чтобы сменить фишку">
       <span class="ptoken" style="border-color:${pl.color}">${tokenHtml(pl.token)}</span>${esc(pl.name)}
@@ -369,7 +373,7 @@ async function roll() {
   busy = false;
   $("status").textContent = status;
   render();
-  if (pl.pos > 0 && moved && prefs.autoCard) openCard(pl.pos, logIdx, viaCell);
+  if (pl.pos > 0 && moved && prefs.autoCard) openCard(pl.pos, logIdx, viaCell, state.players.indexOf(pl));
 }
 
 function nextTurn() {
@@ -460,7 +464,7 @@ function carousel(el, items, current, render, onPick) {
 
 let cars = {};
 let tokenFor = 0;
-const TOKEN_ITEMS = TOKEN_GROUPS.flatMap(([g, list]) => list.map((tk) => ({ tk, name: g })));
+var TOKEN_ITEMS = TOKEN_GROUPS.flatMap(([g, list]) => list.map((tk) => ({ tk, name: g })));
 function drawTokenCar() {
   $("tokenWho").innerHTML = state.players.length > 1 ? state.players.map((p, i) =>
     `<button type="button" class="who-btn${i === tokenFor ? " sel" : ""}" data-i="${i}" style="border-color:${p.color}">${tokenHtml(p.token)} ${esc(p.name)}</button>`).join("") : "";
@@ -499,43 +503,108 @@ document.querySelectorAll("#look .tab").forEach((b) => (b.onclick = () => {
 /* ---------- Новая игра ---------- */
 
 let setupPlayers = [];
-function drawNameFields() {
-  $("nameFields").innerHTML = setupPlayers.map((p, i) => `
-    <div class="prow">
-      <button type="button" class="ptoken big" data-i="${i}" style="border-color:${COLORS[i]}" title="Выбрать фишку">${tokenHtml(p.token)}</button>
-      <label>Имя игрока ${i + 1}<input data-i="${i}" value="${esc(p.name)}" maxlength="20"></label>
-    </div>`).join("");
-  $("nameFields").querySelectorAll("input").forEach((inp) => (inp.oninput = () => { setupPlayers[+inp.dataset.i].name = inp.value; }));
-  $("nameFields").querySelectorAll(".ptoken").forEach((b) => (b.onclick = () => {
-    const i = +b.dataset.i;
-    pickToken(setupPlayers[i].token, (tk) => { setupPlayers[i].token = tk; drawNameFields(); },
-      setupPlayers.filter((_, j) => j !== i).map((p) => p.token));
-  }));
-}
+let wizStep = 0;
 function freeToken() {
   const used = setupPlayers.map((p) => p.token);
   return TOKENS.find((t) => !used.includes(t));
 }
-$("addPlayer").onclick = () => {
-  if (setupPlayers.length < 6) { setupPlayers.push({ name: "Игрок " + (setupPlayers.length + 1), token: freeToken() }); drawNameFields(); }
-};
-$("delPlayer").onclick = () => { if (setupPlayers.length > 1) { setupPlayers.pop(); drawNameFields(); } };
-$("setupForm").onsubmit = () => {
+const INTENT_TIPS = `<details class="tips"><summary>Как сформулировать намерение</summary>
+  <p>Хорошее намерение конкретное, про тебя и про сейчас. Начни со слов «что», «как», «почему я».</p>
+  <ul>
+    <li>Слишком общо: «Хочу понять себя». Лучше: «Что мешает мне доверять близким?»</li>
+    <li>Про других: «Как изменить мужа?» Лучше: «Что во мне откликается на его поведение?»</li>
+    <li>Да/нет: «Уходить ли с работы?» Лучше: «Что мне важно в работе, которую я ищу?»</li>
+  </ul>
+  <p>Намерение можно поправить во время игры.</p></details>`;
+
+// Пошаговая настройка: число игроков → каждый игрок (имя, фишка, намерение) → поле → старт
+function drawWiz() {
+  const total = setupPlayers.length + 2;
+  const w = $("wiz");
+  const steps = `<div class="wiz-steps">${Array.from({ length: total }, (_, i) => `<span class="${i === wizStep ? "on" : i < wizStep ? "done" : ""}"></span>`).join("")}</div>`;
+  const nav = (next, label = "Далее →") => `<div class="wiz-nav">
+    ${wizStep > 0 ? `<button type="button" class="ghost" id="wizBack">← Назад</button>` : ""}
+    <button type="button" class="roll" id="wizNext">${label}</button></div>`;
+
+  if (wizStep === 0) {
+    w.innerHTML = `${steps}<h2>Новая игра</h2><p class="wiz-q">Сколько человек будет играть?</p>
+      <div class="count-grid">${[1, 2, 3, 4, 5, 6].map((n) => `<button type="button" class="count${n === setupPlayers.length ? " sel" : ""}" data-n="${n}">${n}</button>`).join("")}</div>
+      <p class="hint">Все играют по очереди на одном устройстве. Ход переходит сам.</p>${nav()}`;
+    w.querySelectorAll(".count").forEach((b) => (b.onclick = () => {
+      const n = +b.dataset.n;
+      while (setupPlayers.length < n) setupPlayers.push({ name: "Игрок " + (setupPlayers.length + 1), token: freeToken(), intention: "" });
+      setupPlayers.length = n;
+      wizStep = 1; drawWiz();
+    }));
+  } else if (wizStep <= setupPlayers.length) {
+    const i = wizStep - 1, p = setupPlayers[i];
+    w.innerHTML = `${steps}<h2 style="color:${COLORS[i]}">Игрок ${i + 1}${setupPlayers.length > 1 ? ` из ${setupPlayers.length}` : ""}</h2>
+      <label>Имя<input id="wizName" value="${esc(p.name)}" maxlength="20"></label>
+      <p class="wiz-q">Выбери фишку</p><div id="wizToken" class="car-wrap"></div>
+      <label class="wiz-q">Намерение: вопрос, с которым ${setupPlayers.length > 1 ? "этот игрок входит" : "ты входишь"} в игру
+        <textarea id="wizIntent" rows="2" placeholder="Например: почему я третий год не решаюсь сменить работу?">${esc(p.intention || "")}</textarea></label>
+      ${INTENT_TIPS}${nav()}`;
+    $("wizName").oninput = () => (p.name = $("wizName").value);
+    $("wizIntent").oninput = () => (p.intention = $("wizIntent").value);
+    carousel($("wizToken"), TOKEN_ITEMS, Math.max(0, TOKENS.indexOf(p.token)),
+      (it) => `<div class="big-token mid" style="border-color:${COLORS[i]}">${tokenHtml(it.tk)}</div>`,
+      (it) => {
+        const other = setupPlayers.find((q) => q !== p && q.token === it.tk);
+        if (other) other.token = p.token;
+        p.token = it.tk;
+      });
+  } else {
+    w.innerHTML = `${steps}<h2>Выбери поле</h2><p class="hint">Листай влево и вправо. Поле и кубик можно сменить позже в «Оформлении».</p>
+      <div id="wizBoard" class="car-wrap"></div>${nav(null, "Начать игру ✦")}`;
+    carousel($("wizBoard"), THEMES, Math.max(0, THEMES.findIndex((t) => t.id === prefs.theme)),
+      (t) => `<div class="big-thumb">${themeThumb(t)}</div>`,
+      (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); buildBoard(); render(); } });
+  }
+  const back = $("wizBack"), next = $("wizNext");
+  if (back) back.onclick = () => { wizStep--; drawWiz(); };
+  if (next) next.onclick = () => {
+    if (wizStep === 0 && !setupPlayers.length) return;
+    if (wizStep <= setupPlayers.length) { wizStep++; drawWiz(); $("setup").scrollTop = 0; return; }
+    startGame();
+  };
+}
+function startGame() {
   state = {
-    intention: $("inIntention").value.trim(),
-    players: setupPlayers.map((p, i) => ({ name: p.name.trim() || "Игрок " + (i + 1), token: p.token, color: COLORS[i], pos: 0, done: false })),
+    players: setupPlayers.map((p, i) => ({ name: p.name.trim() || "Игрок " + (i + 1), token: p.token, intention: (p.intention || "").trim(), color: COLORS[i], pos: 0, done: false })),
     turn: 0, over: false, log: [], notes: {},
   };
+  $("setup").close();
   $("status").textContent = "Чтобы войти в игру, выбросьте 6";
   showDie(6);
   $("cellInfo").innerHTML = "";
   render();
-};
-function openSetup() {
-  setupPlayers = state.players.map((p) => ({ name: p.name, token: p.token }));
-  drawNameFields();
-  $("setup").showModal();
+  toast(`Первый ход: ${state.players[0].token} ${state.players[0].name}`, state.players[0].color);
 }
+function openSetup() {
+  setupPlayers = state.players.map((p, i) => ({ name: p.name, token: p.token, intention: intentOf(i) }));
+  wizStep = 0;
+  $("setup").showModal();
+  drawWiz();
+}
+
+$("setupForm").onsubmit = (e) => e.preventDefault();
+
+// Изменение намерения во время игры
+$("intention").onclick = () => {
+  const p = state.players[state.turn];
+  $("intentWho").textContent = `${p.token} ${p.name}`;
+  $("intentText").value = intentOf(state.turn);
+  $("intentDlg").showModal();
+};
+$("intentSave").onclick = () => {
+  const p = state.players[state.turn], v = $("intentText").value.trim(), old = intentOf(state.turn);
+  if (v !== old) {
+    p.intention = v;
+    state.log.push(`<span style="color:${p.color}">${p.token} ${esc(p.name)}</span>: ✎ намерение уточнено: «${esc(v)}»`);
+  }
+  $("intentDlg").close();
+  render();
+};
 
 // Большой крестик закрытия во всех окнах
 document.querySelectorAll("dialog").forEach((d) => {
@@ -560,7 +629,7 @@ if (state && state.players) {
   render();
   showDie(state.lastRoll || 6);
 } else {
-  state = { intention: "", players: [{ name: "Игрок 1", token: "🐘", color: COLORS[0], pos: 0, done: false }], turn: 0, over: false, log: [] };
+  state = { players: [{ name: "Игрок 1", token: "🐘", intention: "", color: COLORS[0], pos: 0, done: false }], turn: 0, over: false, log: [] };
   render();
   showDie(6);
   openSetup();

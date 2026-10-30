@@ -24,7 +24,7 @@
   </section>
 
   <aside class="panel">
-    <div id="intention" class="intention"></div>
+    <div id="intention" class="intention" title="Нажмите, чтобы изменить"></div>
     <div class="turn">
       <div id="turnName" class="turn-name"></div>
       <div id="dice" class="dice" aria-live="polite"></div>
@@ -38,27 +38,17 @@
   </aside>
 </main>
 
-<dialog id="setup">
-  <form method="dialog" id="setupForm">
-    <h2>Новая игра</h2>
-    <label>Ваше намерение (вопрос, с которым вы входите в игру)
-      <textarea id="inIntention" rows="2" placeholder="Например: почему я третий год не решаюсь сменить работу?"></textarea>
-    </label>
-    <details class="tips"><summary>Как сформулировать намерение</summary>
-      <p>Хорошее намерение конкретное, про тебя и про сейчас. Его можно начать со слов «что», «как», «почему я».</p>
-      <ul>
-        <li>Слишком общо: «Хочу понять себя». Лучше: «Что мешает мне доверять близким?»</li>
-        <li>Про других: «Как изменить мужа?» Лучше: «Что во мне откликается на его поведение?»</li>
-        <li>Да/нет: «Уходить ли с работы?» Лучше: «Что мне важно в работе, которую я ищу?»</li>
-      </ul>
-      <p>Намерение может уточниться во время игры, и это нормально.</p>
-    </details>
-    <div id="nameFields"></div>
-    <div class="row">
-      <button type="button" id="addPlayer" class="ghost">+ Игрок</button>
-      <button type="button" id="delPlayer" class="ghost">− Игрок</button>
-    </div>
-    <button type="submit" class="roll">Начать</button>
+<dialog id="setup" class="full">
+  <form method="dialog" id="setupForm"><div id="wiz"></div></form>
+</dialog>
+
+<dialog id="intentDlg">
+  <form method="dialog">
+    <h2>Намерение</h2>
+    <p class="hint" id="intentWho"></p>
+    <textarea id="intentText" rows="3"></textarea>
+    <p class="hint">Намерение часто уточняется по ходу игры. Старая формулировка останется в «Моём пути».</p>
+    <button type="button" class="roll" id="intentSave">Сохранить</button>
   </form>
 </dialog>
 
