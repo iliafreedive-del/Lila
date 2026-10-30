@@ -7,7 +7,7 @@ const board = $("board");
 
 let state = null;
 let busy = false;
-let prefs = { theme: "chakra", dice: "classic", autoCard: true };
+let prefs = { theme: "full1", dice: "classic", autoCard: true };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem(PREFS_KEY)) || {}); } catch (e) {}
 
 const theme = () => THEMES.find((t) => t.id === prefs.theme) || THEMES[0];
@@ -22,7 +22,18 @@ function cellPos(n) {
   const row = Math.floor((n - 1) / 9);
   const i = (n - 1) % 9;
   const col = row % 2 === 0 ? i : 8 - i;
+  const t = theme();
+  if (t.full) {
+    const r = 7 - row;
+    return { x: (t.gx[col] + t.gx[col + 1]) / 2 / t.size * 100, y: (t.gy[r] + t.gy[r + 1]) / 2 / t.size * 100, row, col };
+  }
   return { x: (col + 0.5) / 9 * 100, y: (7 - row + 0.5) / 8 * 100, row, col };
+}
+// Сетка готового поля: отступы и неравные размеры клеток по линиям на картинке
+function fullGridStyle(t) {
+  const pc = (v) => (v / t.size * 100).toFixed(3) + "%";
+  const fr = (a) => a.slice(1).map((v, i) => (v - a[i]) + "fr").join(" ");
+  return `left:${pc(t.gx[0])};top:${pc(t.gy[0])};right:${pc(t.size - t.gx[9])};bottom:${pc(t.size - t.gy[8])};grid-template-columns:${fr(t.gx)};grid-template-rows:${fr(t.gy)}`;
 }
 const cellAt = (r, c) => r * 9 + (r % 2 === 0 ? c : 8 - c) + 1;
 const cellColor = (t, n, r, c) => (t.cell ? t.cell(n, r, c) : t.rows[r]);
@@ -57,6 +68,21 @@ function tokenHtml(tk) {
 
 function buildBoard() {
   const t = theme();
+  board.classList.toggle("full-img", !!t.full);
+  if (t.full) {
+    document.body.style.background = t.bg;
+    document.body.style.setProperty("--accent", t.accent);
+    board.style.setProperty("--board-border", t.border);
+    board.style.background = "#000";
+    let cells = "";
+    for (let r = 7; r >= 0; r--) for (let c = 0; c < 9; c++) {
+      const n = cellAt(r, c);
+      cells += `<div class="cell${n === GOAL ? " goal" : ""}" id="c${n}" data-n="${n}" title="${n}. ${CELLS[n][0]}"></div>`;
+    }
+    board.innerHTML = `<img class="art-img" src="${t.full}" alt="Поле Лилы"><div class="grid" style="${fullGridStyle(t)}">${cells}</div>`;
+    board.querySelectorAll(".cell").forEach((el) => (el.onclick = () => openCard(+el.dataset.n)));
+    return;
+  }
   document.body.style.background = t.bg;
   document.body.style.setProperty("--accent", t.accent);
   board.style.setProperty("--board-border", t.border || t.accent);
@@ -418,6 +444,7 @@ function pickToken(current, cb, taken = []) {
 /* ---------- Оформление ---------- */
 
 function themeThumb(t) {
+  if (t.full) return `<div class="thumb square"><img src="${t.full}" alt=""></div>`;
   let cells = "";
   for (let r = 0; r < 8; r++) for (let c = 0; c < 9; c++) {
     const n = cellAt(r, c);

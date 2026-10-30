@@ -264,3 +264,11 @@ dialog.full { padding-top: max(14px, env(safe-area-inset-top)); padding-bottom: 
 .home-tip { padding-right: 36px !important; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; padding: 10px 12px; font-size: 14px; color: var(--muted); position: relative; }
 .home-tip b { color: var(--accent); font-weight: normal; }
 .home-tip button { position: absolute; top: 4px; right: 6px; background: none; border: none; font-size: 18px; color: var(--muted); padding: 4px 8px; }
+
+/* Готовые нарисованные поля */
+.board.full-img { aspect-ratio: 1 / 1; }
+.board.full-img .grid { position: absolute; inset: auto; gap: 0; padding: 0; }
+.board.full-img .cell { background: transparent; border: none; border-radius: 0; }
+.board.full-img .cell.goal { box-shadow: none; }
+.board.full-img .cell.here { outline: 0.5cqw solid #fff; outline-offset: -0.5cqw; box-shadow: 0 0 2cqw #fff inset; }
+.thumb.square { aspect-ratio: 1 / 1; }

@@ -294,6 +294,13 @@ const ART = {
 };
 
 const THEMES = [
+  // Готовые нарисованные поля: клетки, змеи и стрелы уже на картинке. gx/gy — линии сетки в пикселях (картинка 1254×1254)
+  { id: "full1", name: "Рассвет", full: "img/boards/full-1.jpg", size: 1254,
+    gx: [54, 184, 314, 441, 572, 696, 814, 941, 1069, 1196], gy: [70, 216, 357, 503, 643, 780, 914, 1044, 1186],
+    bg: "linear-gradient(#e9c8f0, #f7c6c9 50%, #6b4c8a)", accent: "#d4a017", border: "#d4a017" },
+  { id: "full2", name: "Космическая Лила", full: "img/boards/full-2.jpg", size: 1254,
+    gx: [59, 183, 314, 441, 570, 697, 817, 941, 1070, 1198], gy: [105, 248, 388, 532, 670, 810, 940, 1067, 1192],
+    bg: "radial-gradient(circle at 50% 10%, #5a1f8a, #12052a 75%)", accent: "#ffcf4d", border: "#ffcf4d" },
   { id: "chakra", name: "Чакры", rows: ["#f4a6a0", "#f7c49a", "#f6e3a1", "#c5e6a6", "#a9e0d6", "#a9c8ee", "#bcb2ec", "#dcb6ee"],
     alpha: 0.8, art: [["figure", { color: "#6a1b9a", opacity: 0.18, aura: "#fff", auraOp: 0.6 }]],
     ink: "#2b1d10", bg: "radial-gradient(circle at 50% 0%, #3a2550, #1c1424 70%)", accent: "#f2b84b",
