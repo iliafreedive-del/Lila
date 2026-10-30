@@ -799,3 +799,5 @@ if (state && state.players) {
   showDie(6);
   openSetup();
 }
+// Номер версии в правилах: по нему видно, что загрузилась свежая игра
+(() => { const m = document.querySelector('script[src^="game.js"]').src.match(/v=(\d+)/); if (m) $("ver").textContent = "Версия игры: " + new Date(+m[1] * 1000).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }); })();
