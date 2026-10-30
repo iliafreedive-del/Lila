@@ -1,13 +1,21 @@
 const COLORS = ["#e0566b", "#4ba3f2", "#5ccf7a", "#f2b84b", "#b07af2", "#f27ac8"];
-const ROW_BG = ["#f4a6a0", "#f7c49a", "#f6e3a1", "#c5e6a6", "#a9e0d6", "#a9c8ee", "#bcb2ec", "#dcb6ee"];
-const DICE = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
 const SAVE_KEY = "lila-save-v1";
+const PREFS_KEY = "lila-prefs-v1";
 
 const $ = (id) => document.getElementById(id);
 const board = $("board");
 
 let state = null;
 let busy = false;
+let prefs = { theme: "chakra", dice: "classic" };
+try { Object.assign(prefs, JSON.parse(localStorage.getItem(PREFS_KEY)) || {}); } catch (e) {}
+
+const theme = () => THEMES.find((t) => t.id === prefs.theme) || THEMES[0];
+const diceSkin = () => DICE_SKINS.find((d) => d.id === prefs.dice) || DICE_SKINS[0];
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const cellName = (n) => `<b>${n}. ${CELLS[n][0]}</b>`;
+const val = (v, ...a) => (typeof v === "function" ? v(...a) : v);
 
 // Координаты клетки (центр) в процентах: 1 — левый нижний угол, ряды «змейкой»
 function cellPos(n) {
@@ -16,48 +24,98 @@ function cellPos(n) {
   const col = row % 2 === 0 ? i : 8 - i;
   return { x: (col + 0.5) / 9 * 100, y: (7 - row + 0.5) / 8 * 100, row, col };
 }
+const cellAt = (r, c) => r * 9 + (r % 2 === 0 ? c : 8 - c) + 1;
+const cellColor = (t, n, r, c) => (t.cell ? t.cell(n, r, c) : t.rows[r]);
 
-function buildBoard() {
-  board.innerHTML = "";
-  for (let r = 7; r >= 0; r--) {
-    for (let c = 0; c < 9; c++) {
-      const n = r * 9 + (r % 2 === 0 ? c : 8 - c) + 1;
-      const el = document.createElement("div");
-      el.className = "cell" + (n === GOAL ? " goal" : "");
-      el.id = "c" + n;
-      el.style.background = ROW_BG[r];
-      el.innerHTML = `<span class="n">${n}</span><span class="t">${CELLS[n][0]}</span>`;
-      el.onclick = () => showCell(n);
-      board.appendChild(el);
-    }
-  }
-  board.insertAdjacentHTML("beforeend", overlaySvg());
+// Уникальные id внутри SVG, чтобы градиенты разных рисунков не путались
+let uidCounter = 0;
+function artSvg(t) {
+  const uid = "u" + uidCounter++;
+  const s = (t.art || []).map(([name, opts]) => ART[name](opts)).join("");
+  return s.replace(/id="(\w+)"/g, `id="$1_${uid}"`).replace(/url\(#(\w+)\)/g, `url(#$1_${uid})`);
 }
 
-function overlaySvg() {
+/* ---------- Поле ---------- */
+
+function buildBoard() {
+  const t = theme();
+  document.body.style.background = t.bg;
+  document.body.style.setProperty("--accent", t.accent);
+  board.style.setProperty("--board-border", t.border || t.accent);
+  board.style.setProperty("--gap", (t.gap || 0) + "px");
+  board.style.setProperty("--radius", (t.radius || 0) + "%");
+  board.style.setProperty("--cell-border", t.cellBorder || "rgba(0,0,0,.25)");
+  board.style.background = t.boardBg || "transparent";
+  board.style.fontFamily = t.font;
+  board.classList.toggle("glow", !!t.glow);
+  board.classList.toggle("shadow", !!t.shadow);
+
+  let cells = "";
+  for (let r = 7; r >= 0; r--) {
+    for (let c = 0; c < 9; c++) {
+      const n = cellAt(r, c);
+      const bg = cellColor(t, n, r, c);
+      const a = Math.round((t.alpha ?? 1) * 100);
+      cells += `<div class="cell${n === GOAL ? " goal" : ""}" id="c${n}" data-n="${n}"
+        style="background:color-mix(in srgb, ${bg} ${a}%, transparent);color:${val(t.ink, n, r, c)}">
+        <span class="n">${n}</span><span class="t">${CELLS[n][0]}</span></div>`;
+    }
+  }
+  board.innerHTML = `<svg class="art" viewBox="0 0 900 800" preserveAspectRatio="none">${artSvg(t)}</svg>
+    <div class="grid">${cells}</div>${overlaySvg(t)}`;
+  board.querySelectorAll(".cell").forEach((el) => (el.onclick = () => showCell(+el.dataset.n)));
+}
+
+function overlaySvg(t) {
   // viewBox 900x800: клетка 100x100
   const p = (n) => { const q = cellPos(n); return [q.x * 9, q.y * 8]; };
-  let s = `<svg class="overlay" viewBox="0 0 900 800" preserveAspectRatio="none">
-    <defs><marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-      <path d="M0,0 L10,5 L0,10 z" fill="#b8860b"/></marker></defs>`;
+  let s = `<svg class="overlay" viewBox="0 0 900 800" preserveAspectRatio="none">`;
   for (const [from, to] of Object.entries(ARROWS)) {
     const [x1, y1] = p(+from), [x2, y2] = p(to);
-    s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#fff6" stroke-width="10" stroke-linecap="round"/>
-      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#b8860b" stroke-width="5" stroke-linecap="round" marker-end="url(#ah)"/>`;
+    s += arrowSvg(x1, y1, x2, y2, t.arrow);
   }
   for (const [from, to] of Object.entries(SNAKES)) {
     const [x1, y1] = p(+from), [x2, y2] = p(to);
-    s += `<path d="${wave(x1, y1, x2, y2)}" fill="none" stroke="#0005" stroke-width="11" stroke-linecap="round"/>
-      <path d="${wave(x1, y1, x2, y2)}" fill="none" stroke="#2e8b57" stroke-width="7" stroke-linecap="round"/>
-      <circle cx="${x1}" cy="${y1}" r="11" fill="#2e8b57" stroke="#0006" stroke-width="2"/>
-      <circle cx="${x1 - 4}" cy="${y1 - 3}" r="2.2" fill="#fff"/><circle cx="${x1 + 4}" cy="${y1 - 3}" r="2.2" fill="#fff"/>`;
+    s += snakeSvg(x1, y1, x2, y2, t.snake, t.snakeStyle);
   }
   return s + "</svg>";
 }
 
+function arrowSvg(x1, y1, x2, y2, col) {
+  const a = Math.atan2(y2 - y1, x2 - x1), deg = (a * 180) / Math.PI;
+  const head = `<path transform="translate(${x2} ${y2}) rotate(${deg})" d="M6 0 L-22 -12 L-16 0 L-22 12 Z" fill="${col}" stroke="#0006" stroke-width="1.5"/>`;
+  const fl = `<g transform="translate(${x1} ${y1}) rotate(${deg})" fill="${col}" opacity=".9">
+      <path d="M0 0 L-14 -12 L-4 -12 L10 0 Z"/><path d="M0 0 L-14 12 L-4 12 L10 0 Z"/>
+      <path d="M14 0 L0 -12 L10 -12 L24 0 Z"/><path d="M14 0 L0 12 L10 12 L24 0 Z"/></g>`;
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#0005" stroke-width="7" stroke-linecap="round"/>
+    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="4" stroke-linecap="round"/>${fl}${head}`;
+}
+
+function snakeSvg(x1, y1, x2, y2, col, style) {
+  const d = wave(x1, y1, x2, y2);
+  const a = Math.atan2(y2 - y1, x2 - x1), deg = (a * 180) / Math.PI;
+  let s;
+  if (style === "outline") {
+    s = `<path d="${d}" fill="none" stroke="${col}" stroke-width="12" stroke-linecap="round"/>
+      <path d="${d}" fill="none" stroke="#fff8" stroke-width="7" stroke-linecap="round"/>
+      <path d="${d}" fill="none" stroke="${col}" stroke-width="2" stroke-dasharray="2 6"/>`;
+  } else {
+    s = `<path d="${d}" fill="none" stroke="#0006" stroke-width="13" stroke-linecap="round"/>
+      <path d="${d}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round"/>`;
+    if (style === "scales") s += `<path d="${d}" fill="none" stroke="#fff7" stroke-width="5" stroke-dasharray="1 7" stroke-linecap="round"/>`;
+    else s += `<path d="${d}" fill="none" stroke="#fff3" stroke-width="2.5" stroke-linecap="round"/>`;
+  }
+  // Голова змеи смотрит против направления к хвосту
+  return s + `<g transform="translate(${x1} ${y1}) rotate(${deg + 180})">
+      <ellipse cx="4" cy="0" rx="17" ry="12" fill="${col}" stroke="#0007" stroke-width="2"/>
+      <circle cx="9" cy="-5" r="2.6" fill="#fff"/><circle cx="9" cy="5" r="2.6" fill="#fff"/>
+      <circle cx="10" cy="-5" r="1.2" fill="#000"/><circle cx="10" cy="5" r="1.2" fill="#000"/>
+      <path d="M20 0 l10 0 l4 -4 M30 0 l4 4" stroke="#c62828" stroke-width="2" fill="none"/></g>`;
+}
+
 function wave(x1, y1, x2, y2) {
   const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
-  const nx = -dy / len, ny = dx / len, k = Math.max(3, Math.round(len / 90)), amp = 16;
+  const nx = -dy / len, ny = dx / len, k = Math.max(3, Math.round(len / 90)), amp = 18;
   let d = `M${x1},${y1}`;
   for (let i = 1; i <= k; i++) {
     const t0 = (i - 0.5) / k, t1 = i / k, sgn = i % 2 ? 1 : -1;
@@ -65,6 +123,20 @@ function wave(x1, y1, x2, y2) {
   }
   return d;
 }
+
+/* ---------- Кубик ---------- */
+
+const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+function dieHtml(v, skin, cls = "") {
+  const pips = Array.from({ length: 9 }, (_, i) =>
+    `<span class="pip">${PIPS[v].includes(i) ? (skin.pipChar ? `<i class="ch">${skin.pipChar}</i>` : "<i></i>") : ""}</span>`).join("");
+  const glow = skin.glow ? `0 0 18px ${skin.glow},` : "";
+  return `<div class="die ${cls}" style="background:${skin.bg};border-color:${skin.edge};--pip:${skin.pip};
+    box-shadow:${glow} inset 0 -6px 0 ${skin.edge}55, 0 6px 14px rgba(0,0,0,.45)${skin.pipShadow ? ";--pip-shadow:0 0 3px #000" : ""}">${pips}</div>`;
+}
+function showDie(v, cls) { $("dice").innerHTML = dieHtml(v, diceSkin(), cls); }
+
+/* ---------- Информация и отрисовка ---------- */
 
 function showCell(n) {
   const [name, sk, text] = CELLS[n];
@@ -78,49 +150,52 @@ function render() {
   board.querySelectorAll(".token").forEach((t) => t.remove());
   board.querySelectorAll(".cell.here").forEach((c) => c.classList.remove("here"));
   const cur = state.players[state.turn];
+  const offs = [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1]];
   state.players.forEach((pl, i) => {
     if (pl.pos < 1) return;
     const q = cellPos(pl.pos);
     const t = document.createElement("div");
-    t.className = "token";
-    t.style.background = pl.color;
-    const off = [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1]][i];
-    t.style.left = `calc(${q.x}% + ${off[0] * 1.6}%)`;
-    t.style.top = `calc(${q.y}% + ${off[1] * 1.6}%)`;
+    t.className = "token" + (i === state.turn && !state.over ? " active" : "");
+    t.style.borderColor = pl.color;
+    t.style.left = `calc(${q.x}% + ${offs[i][0] * 1.7}%)`;
+    t.style.top = `calc(${q.y}% + ${offs[i][1] * 1.9}%)`;
+    t.textContent = pl.token;
     board.appendChild(t);
   });
   if (cur.pos > 0) $("c" + cur.pos).classList.add("here");
 
   $("intention").textContent = state.intention ? "Намерение: " + state.intention : "";
   $("players").innerHTML = state.players.map((pl, i) => `
-    <div class="player ${i === state.turn && !state.over ? "active" : ""}">
-      <span class="dot" style="background:${pl.color}"></span>${esc(pl.name)}
+    <div class="player ${i === state.turn && !state.over ? "active" : ""}" data-i="${i}" title="Нажмите, чтобы сменить фишку">
+      <span class="ptoken" style="border-color:${pl.color}">${pl.token}</span>${esc(pl.name)}
       <span class="where">${pl.done ? "🏆 достиг цели" : pl.pos < 1 ? "ждёт шестёрку" : pl.pos + ". " + CELLS[pl.pos][0]}</span>
     </div>`).join("");
+  $("players").querySelectorAll(".player").forEach((el) => {
+    el.onclick = () => pickToken(state.players[+el.dataset.i].token, (tk) => { state.players[+el.dataset.i].token = tk; render(); },
+      state.players.filter((_, j) => j !== +el.dataset.i).map((p) => p.token));
+  });
   $("turnName").innerHTML = state.over
     ? `<span class="win">Игра окончена</span>`
-    : `Ходит: <b style="color:${cur.color}">${esc(cur.name)}</b>`;
+    : `Ходит: <b style="color:${cur.color}">${cur.token} ${esc(cur.name)}</b>`;
   $("btnRoll").disabled = state.over || busy;
   $("log").innerHTML = state.log.slice().reverse().map((l) => `<li>${l}</li>`).join("");
   save();
 }
 
-const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const cellName = (n) => `<b>${n}. ${CELLS[n][0]}</b>`;
+/* ---------- Ход ---------- */
 
 async function roll() {
   if (busy || state.over) return;
   busy = true;
+  render();
   const pl = state.players[state.turn];
   const v = 1 + Math.floor(Math.random() * 6);
-  const dice = $("dice");
-  dice.classList.remove("spin"); void dice.offsetWidth; dice.classList.add("spin");
-  dice.textContent = DICE[v];
-  render();
-  await sleep(450);
+  for (let k = 0; k < 7; k++) { showDie(1 + Math.floor(Math.random() * 6), "rolling"); await sleep(60); }
+  showDie(v, "landed");
+  state.lastRoll = v;
+  await sleep(250);
 
-  const who = `<span style="color:${pl.color}">${esc(pl.name)}</span>`;
+  const who = `<span style="color:${pl.color}">${pl.token} ${esc(pl.name)}</span>`;
   let msg;
   if (pl.pos < 1) {
     if (v === 6) {
@@ -151,15 +226,12 @@ async function roll() {
   if (pl.pos === GOAL) {
     pl.done = true;
     state.log.push(`🏆 ${who} достиг Космического сознания!`);
-    status = `${esc(pl.name)} достиг цели!`;
+    status = `${pl.name} достиг цели!`;
     if (state.players.every((p) => p.done)) state.over = true;
   }
   if (!state.over) {
-    if (v === 6 && !pl.done) {
-      status = status || "Выпала 6 — бросайте ещё раз";
-    } else {
-      nextTurn();
-    }
+    if (v === 6 && !pl.done) status = status || "Выпала 6 — бросайте ещё раз";
+    else nextTurn();
   }
   busy = false;
   $("status").textContent = status;
@@ -183,42 +255,101 @@ async function stepTo(pl, n) {
 function save() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
 }
+function savePrefs() {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) {}
+}
 function load() {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { return null; }
 }
 
-// Настройка новой игры
-let names = ["Игрок 1"];
-function drawNameFields() {
-  $("nameFields").innerHTML = names.map((nm, i) => `
-    <label><span style="color:${COLORS[i]}">●</span> Имя игрока ${i + 1}
-      <input data-i="${i}" value="${esc(nm)}" maxlength="20">
-    </label>`).join("");
-  $("nameFields").querySelectorAll("input").forEach((inp) => {
-    inp.oninput = () => { names[+inp.dataset.i] = inp.value; };
-  });
+/* ---------- Выбор фишки ---------- */
+
+let tokenCallback = null;
+function pickToken(current, cb, taken = []) {
+  tokenCallback = cb;
+  $("tokenGrid").innerHTML = TOKEN_GROUPS.map(([name, list]) => `
+    <h4>${name}</h4><div class="tokens">${list.map((tk) =>
+      `<button type="button" class="tk${tk === current ? " sel" : ""}" ${taken.includes(tk) ? "disabled" : ""} data-tk="${tk}">${tk}</button>`).join("")}</div>`).join("");
+  $("tokenGrid").querySelectorAll(".tk").forEach((b) => (b.onclick = () => {
+    $("tokens").close();
+    tokenCallback && tokenCallback(b.dataset.tk);
+  }));
+  $("tokens").showModal();
 }
-$("addPlayer").onclick = () => { if (names.length < 6) { names.push("Игрок " + (names.length + 1)); drawNameFields(); } };
-$("delPlayer").onclick = () => { if (names.length > 1) { names.pop(); drawNameFields(); } };
+
+/* ---------- Оформление ---------- */
+
+function themeThumb(t) {
+  let cells = "";
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 9; c++) {
+    const n = cellAt(r, c);
+    cells += `<rect x="${c * 100 + 3}" y="${(7 - r) * 100 + 3}" width="94" height="94" rx="${t.radius ? 30 : 0}"
+      fill="${cellColor(t, n, r, c)}" fill-opacity="${t.alpha ?? 1}" stroke="${t.cellBorder || "#0003"}" stroke-width="3"/>`;
+  }
+  return `<svg viewBox="0 0 900 800" preserveAspectRatio="none" style="background:${t.boardBg || "transparent"}">${artSvg(t)}${cells}</svg>`;
+}
+
+function openLook() {
+  $("themeGrid").innerHTML = THEMES.map((t) => `
+    <button type="button" class="swatch${t.id === prefs.theme ? " sel" : ""}" data-id="${t.id}" style="border-color:${t.border || t.accent}">
+      ${themeThumb(t)}<span>${t.name}</span></button>`).join("");
+  $("diceGrid").innerHTML = DICE_SKINS.map((d) => `
+    <button type="button" class="dswatch${d.id === prefs.dice ? " sel" : ""}" data-id="${d.id}">${dieHtml(5, d)}<span>${d.name}</span></button>`).join("");
+  $("themeGrid").querySelectorAll(".swatch").forEach((b) => (b.onclick = () => {
+    prefs.theme = b.dataset.id; savePrefs(); buildBoard(); render();
+    $("themeGrid").querySelectorAll(".swatch").forEach((x) => x.classList.toggle("sel", x === b));
+  }));
+  $("diceGrid").querySelectorAll(".dswatch").forEach((b) => (b.onclick = () => {
+    prefs.dice = b.dataset.id; savePrefs(); showDie(state.lastRoll || 6);
+    $("diceGrid").querySelectorAll(".dswatch").forEach((x) => x.classList.toggle("sel", x === b));
+  }));
+  $("look").showModal();
+}
+
+/* ---------- Новая игра ---------- */
+
+let setupPlayers = [];
+function drawNameFields() {
+  $("nameFields").innerHTML = setupPlayers.map((p, i) => `
+    <div class="prow">
+      <button type="button" class="ptoken big" data-i="${i}" style="border-color:${COLORS[i]}" title="Выбрать фишку">${p.token}</button>
+      <label>Имя игрока ${i + 1}<input data-i="${i}" value="${esc(p.name)}" maxlength="20"></label>
+    </div>`).join("");
+  $("nameFields").querySelectorAll("input").forEach((inp) => (inp.oninput = () => { setupPlayers[+inp.dataset.i].name = inp.value; }));
+  $("nameFields").querySelectorAll(".ptoken").forEach((b) => (b.onclick = () => {
+    const i = +b.dataset.i;
+    pickToken(setupPlayers[i].token, (tk) => { setupPlayers[i].token = tk; drawNameFields(); },
+      setupPlayers.filter((_, j) => j !== i).map((p) => p.token));
+  }));
+}
+function freeToken() {
+  const used = setupPlayers.map((p) => p.token);
+  return TOKENS.find((t) => !used.includes(t));
+}
+$("addPlayer").onclick = () => {
+  if (setupPlayers.length < 6) { setupPlayers.push({ name: "Игрок " + (setupPlayers.length + 1), token: freeToken() }); drawNameFields(); }
+};
+$("delPlayer").onclick = () => { if (setupPlayers.length > 1) { setupPlayers.pop(); drawNameFields(); } };
 $("setupForm").onsubmit = () => {
   state = {
     intention: $("inIntention").value.trim(),
-    players: names.map((nm, i) => ({ name: nm.trim() || "Игрок " + (i + 1), color: COLORS[i], pos: 0, done: false })),
+    players: setupPlayers.map((p, i) => ({ name: p.name.trim() || "Игрок " + (i + 1), token: p.token, color: COLORS[i], pos: 0, done: false })),
     turn: 0, over: false, log: [],
   };
   $("status").textContent = "Чтобы войти в игру, выбросьте 6";
-  $("dice").textContent = "🎲";
+  showDie(6);
   $("cellInfo").innerHTML = "";
   render();
 };
 function openSetup() {
-  if (state) names = state.players.map((p) => p.name);
+  setupPlayers = state.players.map((p) => ({ name: p.name, token: p.token }));
   drawNameFields();
   $("setup").showModal();
 }
 
 $("btnRoll").onclick = roll;
 $("btnNew").onclick = openSetup;
+$("btnLook").onclick = openLook;
 $("btnRules").onclick = () => $("rules").showModal();
 document.addEventListener("keydown", (e) => {
   if ((e.code === "Space" || e.code === "Enter") && !document.querySelector("dialog[open]")) { e.preventDefault(); roll(); }
@@ -227,9 +358,12 @@ document.addEventListener("keydown", (e) => {
 buildBoard();
 state = load();
 if (state && state.players) {
+  state.players.forEach((p, i) => (p.token = p.token || TOKENS[i]));
   render();
+  showDie(state.lastRoll || 6);
 } else {
-  state = { intention: "", players: [{ name: "Игрок 1", color: COLORS[0], pos: 0, done: false }], turn: 0, over: false, log: [] };
+  state = { intention: "", players: [{ name: "Игрок 1", token: "🐘", color: COLORS[0], pos: 0, done: false }], turn: 0, over: false, log: [] };
   render();
+  showDie(6);
   openSetup();
 }

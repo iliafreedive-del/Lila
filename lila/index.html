@@ -11,6 +11,7 @@
 <header>
   <h1>Лила <span>игра самопознания</span></h1>
   <nav>
+    <button id="btnLook" class="ghost">🎨 Оформление</button>
     <button id="btnRules" class="ghost">Правила</button>
     <button id="btnNew" class="ghost">Новая игра</button>
   </nav>
@@ -25,7 +26,7 @@
     <div id="intention" class="intention"></div>
     <div class="turn">
       <div id="turnName" class="turn-name"></div>
-      <div id="dice" class="dice" aria-live="polite">🎲</div>
+      <div id="dice" class="dice" aria-live="polite"></div>
       <button id="btnRoll" class="roll">Бросить кубик</button>
       <div id="status" class="status"></div>
     </div>
@@ -51,6 +52,26 @@
   </form>
 </dialog>
 
+<dialog id="look" class="wide">
+  <form method="dialog">
+    <h2>Оформление</h2>
+    <h3>Поле</h3>
+    <div id="themeGrid" class="theme-grid"></div>
+    <h3>Кубик</h3>
+    <div id="diceGrid" class="dice-grid"></div>
+    <p class="hint">Фишку игрока можно сменить, нажав на его имя в списке игроков.</p>
+    <button class="roll">Готово</button>
+  </form>
+</dialog>
+
+<dialog id="tokens" class="wide">
+  <form method="dialog">
+    <h2>Выберите фишку</h2>
+    <div id="tokenGrid"></div>
+    <button class="ghost">Отмена</button>
+  </form>
+</dialog>
+
 <dialog id="rules">
   <form method="dialog">
     <h2>Правила</h2>
@@ -69,6 +90,8 @@
 </dialog>
 
 <script src="cells.js"></script>
+<script src="themes.js"></script>
+<script src="tokens.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
