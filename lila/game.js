@@ -344,7 +344,7 @@ $("pathSave").onclick = () => {
   a.click();
 };
 
-$("wish").onclick = () => { if (state.wish) setWish(state.wish.title); save(); };
+$("wish").onclick = () => { if (state.wish) setWish(); save(); };
 
 function render() {
   board.querySelectorAll(".token").forEach((t) => t.remove());
@@ -399,27 +399,36 @@ function toast(text, color) {
   toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
 }
 
-// Напутствия ведущего: колода перемешивается, чтобы не повторяться подряд
-const WISH_KEY = "lila-wish-v1";
-function nextWish() {
+// Мысли ведущего: у каждой колоды свой перемешанный порядок, чтобы не повторяться
+function nextWish(pool, key) {
   let d = null;
-  try { d = JSON.parse(localStorage.getItem(WISH_KEY)); } catch (e) {}
-  if (!d || !Array.isArray(d.order) || d.order.length !== WISHES.length || d.i >= d.order.length) {
-    const order = WISHES.map((_, i) => i);
+  try { d = JSON.parse(localStorage.getItem(key)); } catch (e) {}
+  if (!d || !Array.isArray(d.order) || d.order.length !== pool.length || d.i >= d.order.length) {
+    const order = pool.map((_, i) => i);
     for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
     d = { order, i: 0 };
   }
-  const w = WISHES[d.order[d.i++]];
-  try { localStorage.setItem(WISH_KEY, JSON.stringify(d)); } catch (e) {}
+  const w = pool[d.order[d.i++]];
+  try { localStorage.setItem(key, JSON.stringify(d)); } catch (e) {}
   return w;
 }
-function showWish(title) {
+function showWish() {
   const el = $("wish");
   if (!state.wish) { el.hidden = true; return; }
   el.hidden = false;
-  el.innerHTML = `<div class="wish-title">🪷 ${esc(state.wish.title)}</div><div class="wish-text">${esc(state.wish.text)}</div><div class="wish-more">ещё напутствие ↻</div>`;
+  if (el.dataset.t !== state.wish.text) {
+    el.dataset.t = state.wish.text;
+    el.innerHTML = `<div class="wish-text">${esc(state.wish.text)}</div>`;
+    el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
+  }
 }
-function setWish(title) { state.wish = { title, text: nextWish() }; showWish(); }
+// Про ожидание шестёрки — только пока ходящий ещё не вошёл в игру, дальше мудрости и притчи
+function setWish() {
+  const cur = state.players[state.turn];
+  const wait = cur && cur.pos < 1;
+  state.wish = { text: wait ? nextWish(WISHES_WAIT, "lila-wish-wait") : nextWish(WISHES, "lila-wish-v2") };
+  showWish();
+}
 
 async function roll() {
   if (busy || state.over) return;
@@ -427,14 +436,22 @@ async function roll() {
   render();
   const pl = state.players[state.turn];
   const v = 1 + Math.floor(Math.random() * 6);
-  for (let k = 0; k < 7; k++) { showDie(1 + Math.floor(Math.random() * 6), "rolling"); await sleep(60); }
-  showDie(v, "landed");
+  // Кубик катится по полю, показывает число и растворяется
+  const fx = $("dieFx");
+  fx.innerHTML = `<div class="roller">${dieHtml(1 + Math.floor(Math.random() * 6), diceSkin())}</div>`;
+  const roller = fx.firstChild;
+  for (let k = 0; k < 7; k++) { await sleep(90); roller.innerHTML = dieHtml(1 + Math.floor(Math.random() * 6), diceSkin()); }
+  roller.innerHTML = dieHtml(v, diceSkin(), "landed");
+  showDie(v);
   state.lastRoll = v;
-  await sleep(250);
+  await sleep(650);
+  roller.classList.add("fade");
+  setTimeout(() => { if (fx.firstChild === roller) fx.innerHTML = ""; }, 500);
+  await sleep(200);
 
   const who = `<span style="color:${pl.color}">${pl.token} ${esc(pl.name)}</span>`;
   const startPos = pl.pos;
-  let msg, viaCell = null, waitHint = false;
+  let msg, viaCell = null;
   if (pl.pos < 1) {
     if (v === 6) {
       await stepTo(pl, 1);
@@ -443,7 +460,6 @@ async function roll() {
       msg = `${who}: выпало 6 — Рождение, вход в игру → ${cellName(6)}`;
     } else {
       msg = `${who}: выпало ${v}, для входа нужна 6`;
-      waitHint = true;
     }
   } else if (pl.pos + v > 72) {
     msg = `${who}: выпало ${v}, ход невозможен — остаётся на ${cellName(pl.pos)}`;
@@ -470,19 +486,16 @@ async function roll() {
     status = `${pl.name} достиг цели!`;
     if (state.players.every((p) => p.done)) state.over = true;
   }
-  state.wish = null;
   if (!state.over) {
     if (v === 6 && !pl.done) status = status || "Выпала 6 — бросайте ещё раз";
     else {
       const before = state.turn;
       nextTurn();
       const multi = state.turn !== before;
-      if (waitHint) setWish(multi ? `${pl.name}, пока ждёшь шестёрку и свой ход` : "Пока ждёшь шестёрку");
-      else if (multi) setWish(`${pl.name}, пока ждёшь своего хода`);
-      else state.wish = null;
       if (multi) toast(`Ход переходит: ${state.players[state.turn].token} ${state.players[state.turn].name}`, state.players[state.turn].color);
     }
   }
+  if (!state.over) setWish(); else state.wish = null;
   $("status").textContent = status;
   render();
   if (pl.pos > 0 && moved) await landing(pl.pos, prefs.autoCard ? () => openCard(pl.pos, logIdx, viaCell, state.players.indexOf(pl), true) : null);
@@ -544,7 +557,7 @@ function themeThumb(t) {
 }
 
 // Карусель: один вариант на весь экран, листается свайпом или стрелками
-function carousel(el, items, current, render, onPick) {
+function carousel(el, items, current, render, onPick, onTap) {
   el.innerHTML = `<div class="car">
       <button type="button" class="car-btn prev" aria-label="Назад">‹</button>
       <div class="car-track">${items.map((it) => `<div class="car-item">${render(it)}</div>`).join("")}</div>
@@ -575,6 +588,11 @@ function carousel(el, items, current, render, onPick) {
     clearTimeout(t);
     t = setTimeout(() => onPick(items[idx]), 150);
   };
+  // Нажатие на сам вариант выбирает его сразу
+  if (onTap) {
+    track.classList.add("tappable");
+    track.onclick = (e) => { if (e.target.closest(".car-item")) { clearTimeout(t); onPick(items[idx]); onTap(items[idx]); } };
+  }
   show();
   requestAnimationFrame(() => (track.scrollLeft = idx * track.clientWidth));
   return { refresh: () => (track.scrollLeft = idx * track.clientWidth) };
@@ -601,7 +619,7 @@ function drawTokenCar() {
       me.token = it.tk;
       render();
       $("tokenWho").querySelectorAll(".who-btn").forEach((b, i) => (b.innerHTML = `${tokenHtml(state.players[i].token)} ${esc(state.players[i].name)}`));
-    });
+    }, () => $("look").close());
 }
 function openLook() {
   $("look").showModal();
@@ -609,10 +627,10 @@ function openLook() {
   drawTokenCar();
   cars.themeCar = carousel($("themeCar"), THEMES, Math.max(0, THEMES.findIndex((t) => t.id === prefs.theme)),
     (t) => `<div class="big-thumb">${themeThumb(t)}</div>`,
-    (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); boardDirty = true; } });
+    (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); boardDirty = true; } }, () => $("look").close());
   cars.diceCar = carousel($("diceCar"), DICE_SKINS, Math.max(0, DICE_SKINS.findIndex((d) => d.id === prefs.dice)),
     (d) => `<div class="big-die">${dieHtml(5, d)}</div>`,
-    (d) => { if (prefs.dice !== d.id) { prefs.dice = d.id; savePrefs(); showDie(state.lastRoll || 6); } });
+    (d) => { if (prefs.dice !== d.id) { prefs.dice = d.id; savePrefs(); showDie(state.lastRoll || 6); } }, () => $("look").close());
 }
 document.querySelectorAll("#look .tab").forEach((b) => (b.onclick = () => {
   document.querySelectorAll("#look .tab").forEach((x) => x.classList.toggle("sel", x === b));
@@ -675,11 +693,11 @@ function drawWiz() {
         p.token = it.tk;
       });
   } else {
-    w.innerHTML = `${steps}<h2>Выбери поле</h2><p class="hint">Листай влево и вправо. Поле и кубик можно сменить позже в «Оформлении».</p>
+    w.innerHTML = `${steps}<h2>Выбери поле</h2><p class="hint">Листай влево и вправо и нажми на поле, чтобы начать игру.</p>
       <div id="wizBoard" class="car-wrap"></div>${nav(null, "Начать игру ✦")}`;
     carousel($("wizBoard"), THEMES, Math.max(0, THEMES.findIndex((t) => t.id === prefs.theme)),
       (t) => `<div class="big-thumb">${themeThumb(t)}</div>`,
-      (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); boardDirty = true; } });
+      (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); boardDirty = true; } }, () => startGame());
   }
   const back = $("wizBack"), next = $("wizNext");
   if (back) back.onclick = () => { wizStep--; drawWiz(); };
@@ -695,8 +713,9 @@ function startGame() {
     turn: 0, over: false, log: [], notes: {},
   };
   $("setup").close();
+  if (boardDirty) { boardDirty = false; buildBoard(); }
   $("status").textContent = "Чтобы войти в игру, выбросьте 6";
-  setWish("Перед первым броском");
+  setWish();
   showDie(6);
   $("cellInfo").innerHTML = "";
   render();
@@ -749,7 +768,7 @@ document.querySelectorAll("dialog").forEach((d) => {
     ? "нажмите «Поделиться» ⬆︎ внизу Safari и выберите «На экран Домой». Откройте Лилу с иконки."
     : "откройте меню браузера ⋮ и выберите «Добавить на главный экран». Откройте Лилу с иконки."}`;
   el.querySelector("button").onclick = () => { el.remove(); try { localStorage.setItem("lila-hometip", "1"); } catch (e) {} };
-  document.querySelector(".panel").prepend(el);
+  document.querySelector(".panel").append(el);
 })();
 
 $("btnRoll").onclick = roll;
