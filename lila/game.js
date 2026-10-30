@@ -35,6 +35,24 @@ function artSvg(t) {
   return s.replace(/id="(\w+)"/g, `id="$1_${uid}"`).replace(/url\(#(\w+)\)/g, `url(#$1_${uid})`);
 }
 
+/* ---------- Картинки (необязательные) ----------
+   Если в папке img/ лежат картинки, игра использует их, иначе рисует сама.
+   img/boards/<id темы>.png, img/dice/<id скина>.png, img/tokens/sheet-1..6.png (сетка 5×5) */
+
+const boardImg = (t) => `<img class="art-img" src="img/boards/${t.id}.png" alt="" onerror="this.remove()">`;
+const sheetOk = [];
+for (let k = 0; k < Math.ceil(TOKENS.length / 25); k++) {
+  const im = new Image();
+  im.onload = () => { sheetOk[k] = true; if (state) render(); };
+  im.src = `img/tokens/sheet-${k + 1}.png`;
+}
+function tokenHtml(tk) {
+  const i = TOKENS.indexOf(tk), k = Math.floor(i / 25);
+  if (i < 0 || !sheetOk[k]) return tk;
+  const j = i % 25;
+  return `<span class="tkimg" style="background-image:url(img/tokens/sheet-${k + 1}.png);background-position:${(j % 5) * 25}% ${Math.floor(j / 5) * 25}%"></span>`;
+}
+
 /* ---------- Поле ---------- */
 
 function buildBoard() {
@@ -61,7 +79,7 @@ function buildBoard() {
         <span class="n">${n}</span><span class="t">${CELLS[n][0]}</span></div>`;
     }
   }
-  board.innerHTML = `<svg class="art" viewBox="0 0 900 800" preserveAspectRatio="none">${artSvg(t)}</svg>
+  board.innerHTML = `<svg class="art" viewBox="0 0 900 800" preserveAspectRatio="none">${artSvg(t)}</svg>${boardImg(t)}
     <div class="grid">${cells}</div>${overlaySvg(t)}`;
   board.querySelectorAll(".cell").forEach((el) => (el.onclick = () => showCell(+el.dataset.n)));
 }
@@ -131,7 +149,7 @@ function dieHtml(v, skin, cls = "") {
   const pips = Array.from({ length: 9 }, (_, i) =>
     `<span class="pip">${PIPS[v].includes(i) ? (skin.pipChar ? `<i class="ch">${skin.pipChar}</i>` : "<i></i>") : ""}</span>`).join("");
   const glow = skin.glow ? `0 0 18px ${skin.glow},` : "";
-  return `<div class="die ${cls}" style="background:${skin.bg};border-color:${skin.edge};--pip:${skin.pip};
+  return `<div class="die ${cls}" style="background:url(img/dice/${skin.id}.png) center/cover, ${skin.bg};border-color:${skin.edge};--pip:${skin.pip};
     box-shadow:${glow} inset 0 -6px 0 ${skin.edge}55, 0 6px 14px rgba(0,0,0,.45)${skin.pipShadow ? ";--pip-shadow:0 0 3px #000" : ""}">${pips}</div>`;
 }
 function showDie(v, cls) { $("dice").innerHTML = dieHtml(v, diceSkin(), cls); }
@@ -241,7 +259,7 @@ function render() {
     t.style.borderColor = pl.color;
     t.style.left = `calc(${q.x}% + ${offs[i][0] * 1.7}%)`;
     t.style.top = `calc(${q.y}% + ${offs[i][1] * 1.9}%)`;
-    t.textContent = pl.token;
+    t.innerHTML = tokenHtml(pl.token);
     board.appendChild(t);
   });
   if (cur.pos > 0) $("c" + cur.pos).classList.add("here");
@@ -249,7 +267,7 @@ function render() {
   $("intention").textContent = state.intention ? "Намерение: " + state.intention : "";
   $("players").innerHTML = state.players.map((pl, i) => `
     <div class="player ${i === state.turn && !state.over ? "active" : ""}" data-i="${i}" title="Нажмите, чтобы сменить фишку">
-      <span class="ptoken" style="border-color:${pl.color}">${pl.token}</span>${esc(pl.name)}
+      <span class="ptoken" style="border-color:${pl.color}">${tokenHtml(pl.token)}</span>${esc(pl.name)}
       <span class="where">${pl.done ? "🏆 достиг цели" : pl.pos < 1 ? "ждёт шестёрку" : pl.pos + ". " + CELLS[pl.pos][0]}</span>
     </div>`).join("");
   $("players").querySelectorAll(".player").forEach((el) => {
@@ -370,7 +388,7 @@ function pickToken(current, cb, taken = []) {
   tokenCallback = cb;
   $("tokenGrid").innerHTML = TOKEN_GROUPS.map(([name, list]) => `
     <h4>${name}</h4><div class="tokens">${list.map((tk) =>
-      `<button type="button" class="tk${tk === current ? " sel" : ""}" ${taken.includes(tk) ? "disabled" : ""} data-tk="${tk}">${tk}</button>`).join("")}</div>`).join("");
+      `<button type="button" class="tk${tk === current ? " sel" : ""}" ${taken.includes(tk) ? "disabled" : ""} data-tk="${tk}">${tokenHtml(tk)}</button>`).join("")}</div>`).join("");
   $("tokenGrid").querySelectorAll(".tk").forEach((b) => (b.onclick = () => {
     $("tokens").close();
     tokenCallback && tokenCallback(b.dataset.tk);
@@ -387,7 +405,8 @@ function themeThumb(t) {
     cells += `<rect x="${c * 100 + 3}" y="${(7 - r) * 100 + 3}" width="94" height="94" rx="${t.radius ? 30 : 0}"
       fill="${cellColor(t, n, r, c)}" fill-opacity="${t.alpha ?? 1}" stroke="${t.cellBorder || "#0003"}" stroke-width="3"/>`;
   }
-  return `<svg viewBox="0 0 900 800" preserveAspectRatio="none" style="background:${t.boardBg || "transparent"}">${artSvg(t)}${cells}</svg>`;
+  return `<div class="thumb"><svg viewBox="0 0 900 800" preserveAspectRatio="none" style="background:${t.boardBg || "transparent"}">${artSvg(t)}</svg>${boardImg(t)}
+    <svg viewBox="0 0 900 800" preserveAspectRatio="none">${cells}</svg></div>`;
 }
 
 function openLook() {
@@ -413,7 +432,7 @@ let setupPlayers = [];
 function drawNameFields() {
   $("nameFields").innerHTML = setupPlayers.map((p, i) => `
     <div class="prow">
-      <button type="button" class="ptoken big" data-i="${i}" style="border-color:${COLORS[i]}" title="Выбрать фишку">${p.token}</button>
+      <button type="button" class="ptoken big" data-i="${i}" style="border-color:${COLORS[i]}" title="Выбрать фишку">${tokenHtml(p.token)}</button>
       <label>Имя игрока ${i + 1}<input data-i="${i}" value="${esc(p.name)}" maxlength="20"></label>
     </div>`).join("");
   $("nameFields").querySelectorAll("input").forEach((inp) => (inp.oninput = () => { setupPlayers[+inp.dataset.i].name = inp.value; }));
