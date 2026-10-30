@@ -416,3 +416,8 @@ nav.bottom #btnNew { color: var(--muted); }
 #setup .wiz-q { margin: 8px 0 4px; }
 #setup label { margin-bottom: 6px; }
 #setup .wiz-nav { margin-top: 10px; }
+/* Окошко клетки: нажатие на него открывает толкование, крестик и нажатие мимо закрывают */
+.peek, .peek * { pointer-events: auto; }
+.peek .pk-x { position: absolute; top: 1.2cqw; right: 1.2cqw; width: 6cqw; height: 6cqw; padding: 0; border-radius: 50%;
+  background: #ffffff18; border: 0.3cqw solid #ffffff55; color: #fff; font-size: 3cqw; line-height: 1; display: grid; place-items: center; }
+.peek .pk-x:hover { background: #ffffff33; }

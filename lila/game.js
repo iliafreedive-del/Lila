@@ -88,20 +88,25 @@ function tapCell(n) {
   const jump = ARROWS[n] ? `<div class="pk-jump up">↑ стрела на ${ARROWS[n]}</div>` : SNAKES[n] ? `<div class="pk-jump down">↓ змея на ${SNAKES[n]}</div>` : "";
   el.innerHTML = `<div class="pk-n">${n}</div><div class="pk-name">${CELLS[n][0]}</div><div class="pk-sk">${CELLS[n][1]}</div>
     ${m.hook ? `<div class="pk-hook">${esc(m.hook)}</div>` : ""}${jump}<button type="button" class="pk-more">Читать толкование</button>`;
-  // Карточка пропускает нажатия к клеткам под ней, чтобы можно было выбрать другую
-  el.querySelector(".pk-more").onclick = (e) => { e.stopPropagation(); closePeek(); openCard(n); };
+  el.insertAdjacentHTML("afterbegin", `<button type="button" class="pk-x" aria-label="Закрыть">✕</button>`);
+  el.querySelector(".pk-x").onclick = (e) => { e.stopPropagation(); closePeek(); };
   board.appendChild(el);
   requestAnimationFrame(() => el.classList.add("show"));
 }
-// Клетку ищем по точке касания, сквозь всплывшее окошко: так одним нажатием выбирается любая клетка
+// Пока окошко открыто, нажатие мимо него только закрывает окошко; следующее нажатие выбирает клетку
 let tapStart = null;
 board.addEventListener("pointerdown", (e) => { tapStart = { x: e.clientX, y: e.clientY }; });
 board.addEventListener("pointerup", (e) => {
   if (!tapStart || Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) > 12) return;
   tapStart = null;
-  if (e.target.closest(".pk-more")) return;
-  const cell = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.classList && el.classList.contains("cell"));
-  if (cell) { e.preventDefault(); tapCell(+cell.dataset.n); } else closePeek();
+  const pk = e.target.closest(".peek");
+  if (peekN !== null) {
+    if (!pk) closePeek();
+    else if (!e.target.closest(".pk-x")) { const n = peekN; closePeek(); openCard(n); }
+    return;
+  }
+  const cell = e.target.closest(".cell");
+  if (cell) tapCell(+cell.dataset.n);
 });
 // pointerdown, а не click: iOS Safari не присылает click по пустым местам страницы
 document.addEventListener("pointerdown", (e) => {
