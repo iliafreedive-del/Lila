@@ -506,6 +506,8 @@ async function roll() {
     else {
       const before = state.turn;
       nextTurn();
+      // Наверху остаётся намерение бросившего, пока не бросит следующий
+      if (state.turn !== before) shownIntent = before;
       const multi = state.turn !== before;
       if (multi) toast(`Ход переходит: ${state.players[state.turn].token} ${state.players[state.turn].name}`, state.players[state.turn].color);
     }
