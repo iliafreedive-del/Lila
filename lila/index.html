@@ -13,7 +13,7 @@
 <link rel="icon" href="img/icon-192.png">
 <title>Лила — игра самопознания</title>
 <meta name="description" content="Лила — древняя индийская игра самопознания. Играйте онлайн в браузере.">
-<link rel="stylesheet" href="style.css?v=1793375410">
+<link rel="stylesheet" href="style.css?v=1793375496">
 </head>
 <body>
 <main>
@@ -34,7 +34,8 @@
     <div id="wish" class="wish" hidden title="Нажмите для новой мысли"></div>
     <div id="players" class="players"></div>
     <nav class="bottom">
-      <button id="btnPath" class="ghost">📜 Мой путь</button>
+      <button id="btnPath" class="ghost">📜 Путь</button>
+      <button id="btnGames" class="ghost">💾 Игры</button>
       <button id="btnRules" class="ghost">Правила</button>
       <button id="btnLook" class="ghost" aria-label="Оформление">🎨</button>
       <button id="btnNew" class="ghost">Новая игра</button>
@@ -94,6 +95,20 @@
   </form>
 </dialog>
 
+<dialog id="gamesDlg" class="wide full">
+  <form method="dialog">
+    <h2>Сохранённые игры</h2>
+    <p class="hint">Игра сохраняется сама после каждого хода. Можно закрыть страницу и вернуться завтра, а можно начать другую игру и потом продолжить эту.</p>
+    <div id="gamesList"></div>
+    <div class="row">
+      <button type="button" class="ghost" id="gamesExport">⬇ Сохранить в файл</button>
+      <button type="button" class="ghost" id="gamesImport">⬆ Загрузить из файла</button>
+    </div>
+    <p class="hint">Файл нужен, чтобы перенести игры на другой телефон или компьютер.</p>
+    <input type="file" id="gamesFile" accept=".json,application/json" hidden>
+  </form>
+</dialog>
+
 <dialog id="pathDlg" class="wide full">
   <form method="dialog">
     <h2>Мой путь</h2>
@@ -126,16 +141,16 @@
   </form>
 </dialog>
 
-<script src="cells.js?v=1793375410"></script>
-<script src="meanings.js?v=1793375410"></script>
-<script src="m/m1.js?v=1793375410"></script>
-<script src="m/m2.js?v=1793375410"></script>
-<script src="m/m3.js?v=1793375410"></script>
-<script src="m/m4.js?v=1793375410"></script>
-<script src="wishes.js?v=1793375410"></script>
-<script src="themes.js?v=1793375410"></script>
-<script src="tokens.js?v=1793375410"></script>
-<script src="game.js?v=1793375410"></script>
+<script src="cells.js?v=1793375496"></script>
+<script src="meanings.js?v=1793375496"></script>
+<script src="m/m1.js?v=1793375496"></script>
+<script src="m/m2.js?v=1793375496"></script>
+<script src="m/m3.js?v=1793375496"></script>
+<script src="m/m4.js?v=1793375496"></script>
+<script src="wishes.js?v=1793375496"></script>
+<script src="themes.js?v=1793375496"></script>
+<script src="tokens.js?v=1793375496"></script>
+<script src="game.js?v=1793375496"></script>
 <script>
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((r) => r.update()).catch(() => {});
 </script>

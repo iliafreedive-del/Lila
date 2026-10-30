@@ -421,3 +421,18 @@ nav.bottom #btnNew { color: var(--muted); }
 .peek .pk-x { position: absolute; top: 1.2cqw; right: 1.2cqw; width: 6cqw; height: 6cqw; padding: 0; border-radius: 50%;
   background: #ffffff18; border: 0.3cqw solid #ffffff55; color: #fff; font-size: 3cqw; line-height: 1; display: grid; place-items: center; }
 .peek .pk-x:hover { background: #ffffff33; }
+
+/* Сохранённые игры */
+#gamesList { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 14px; }
+.game-row { display: flex; align-items: center; gap: 8px; background: #ffffff0d; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.game-row.cur { border-color: var(--accent); }
+.gr-main { flex: 1; min-width: 0; }
+.gr-title { font-size: 16px; }
+.gr-intent { font-style: italic; color: #ffe7b0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gr-meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.gr-go { width: auto; font-size: 15px; padding: 8px 12px; }
+.gr-cur { color: var(--accent); font-size: 14px; padding: 0 6px; }
+.gr-del { padding: 8px 10px; }
+nav.bottom #btnGames { flex: 1; }
+[hidden] { display: none !important; }
+.game-row .gr-go { flex: none; width: auto; }

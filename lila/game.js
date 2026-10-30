@@ -532,7 +532,92 @@ async function stepTo(pl, n) {
 
 function save() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+  storeGame();
 }
+
+/* ---------- Сохранённые игры: Лила может идти несколько дней ---------- */
+
+const GAMES_KEY = "lila-games-v1";
+function loadGames() {
+  try { return JSON.parse(localStorage.getItem(GAMES_KEY)) || []; } catch (e) { return []; }
+}
+function saveGames(list) {
+  try { localStorage.setItem(GAMES_KEY, JSON.stringify(list)); } catch (e) { toast("Не хватает места для сохранения"); }
+}
+function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+// Каждая начатая игра хранится в списке и обновляется после каждого хода
+function storeGame() {
+  if (!state || !state.id || !state.log || !state.log.length) return;
+  const list = loadGames().filter((g) => g.id !== state.id);
+  list.unshift({ id: state.id, updated: Date.now(), state: JSON.parse(JSON.stringify(state)) });
+  saveGames(list.slice(0, 50));
+}
+function gameTitle(st) {
+  return st.players.map((p) => `${p.token} ${esc(p.name)}`).join(", ");
+}
+function fmtDate(t) {
+  return new Date(t).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+}
+function openGames() {
+  const list = loadGames();
+  $("gamesList").innerHTML = list.length ? list.map((g) => {
+    const st = g.state, cur = state && g.id === state.id;
+    const where = st.players.map((p) => p.done ? "🏆" : p.pos < 1 ? "у входа" : p.pos).join(" · ");
+    const intent = st.players.map((p) => p.intention).filter(Boolean)[0];
+    return `<div class="game-row${cur ? " cur" : ""}" data-id="${g.id}">
+      <div class="gr-main"><div class="gr-title">${gameTitle(st)}</div>
+        ${intent ? `<div class="gr-intent">«${esc(intent)}»</div>` : ""}
+        <div class="gr-meta">${fmtDate(g.updated)} · ходов: ${st.log.length} · ${where}${st.over ? " · завершена" : ""}</div></div>
+      ${cur ? `<span class="gr-cur">сейчас</span>` : `<button type="button" class="roll gr-go">Продолжить</button>`}
+      <button type="button" class="ghost gr-del" aria-label="Удалить">🗑</button></div>`;
+  }).join("") : `<p class="hint">Сохранённых игр пока нет. Игра сохраняется сама после каждого хода.</p>`;
+  $("gamesList").querySelectorAll(".game-row").forEach((row) => {
+    const id = row.dataset.id;
+    const go = row.querySelector(".gr-go");
+    if (go) go.onclick = () => resumeGame(id);
+    row.querySelector(".gr-del").onclick = () => {
+      if (!confirm("Удалить эту игру? Её путь и записи пропадут.")) return;
+      saveGames(loadGames().filter((g) => g.id !== id));
+      openGames();
+    };
+  });
+  if (!$("gamesDlg").open) $("gamesDlg").showModal();
+}
+function resumeGame(id) {
+  const g = loadGames().find((x) => x.id === id);
+  if (!g) return;
+  storeGame();
+  state = g.state;
+  $("gamesDlg").close();
+  showDie(state.lastRoll || 6);
+  if (!state.wish) setWish();
+  render();
+  toast(`Продолжаем: ${state.players[state.turn].token} ${state.players[state.turn].name}`, state.players[state.turn].color);
+}
+$("btnGames").onclick = openGames;
+$("gamesExport").onclick = () => {
+  storeGame();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ lila: 1, games: loadGames() })], { type: "application/json" }));
+  a.download = `lila-igry-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+};
+$("gamesImport").onclick = () => $("gamesFile").click();
+$("gamesFile").onchange = async () => {
+  const f = $("gamesFile").files[0];
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const add = (data.games || []).filter((g) => g && g.id && g.state && g.state.players);
+    const list = loadGames();
+    add.forEach((g) => { const i = list.findIndex((x) => x.id === g.id); if (i < 0) list.push(g); else if (g.updated > list[i].updated) list[i] = g; });
+    list.sort((a, b) => b.updated - a.updated);
+    saveGames(list.slice(0, 50));
+    toast(`Загружено игр: ${add.length}`);
+    openGames();
+  } catch (e) { toast("Не удалось прочитать файл"); }
+  $("gamesFile").value = "";
+};
 function savePrefs() {
   try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) {}
 }
@@ -723,7 +808,7 @@ function drawWiz() {
 function startGame() {
   state = {
     players: setupPlayers.map((p, i) => ({ name: p.name.trim() || "Игрок " + (i + 1), token: p.token, intention: (p.intention || "").trim(), color: COLORS[i], pos: 0, done: false })),
-    turn: 0, over: false, log: [], notes: {},
+    turn: 0, over: false, log: [], notes: {}, id: newId(),
   };
   $("setup").close();
   if (boardDirty) { boardDirty = false; buildBoard(); }
@@ -797,6 +882,7 @@ buildBoard();
 state = load();
 if (state && state.players) {
   state.players.forEach((p, i) => (p.token = p.token || TOKENS[i]));
+  if (!state.id) { state.id = newId(); save(); }
   render();
   showDie(state.lastRoll || 6);
 } else {
