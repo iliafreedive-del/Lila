@@ -333,6 +333,8 @@ $("pathSave").onclick = () => {
   a.click();
 };
 
+$("wish").onclick = () => { if (state.wish) setWish(state.wish.title); save(); };
+
 function render() {
   board.querySelectorAll(".token").forEach((t) => t.remove());
   board.querySelectorAll(".cell.here").forEach((c) => c.classList.remove("here"));
@@ -367,6 +369,7 @@ function render() {
     ? `<span class="win">Игра окончена</span>`
     : `Ходит: <b style="color:${cur.color}">${cur.token} ${esc(cur.name)}</b>`;
   $("btnRoll").disabled = state.over || busy;
+  showWish();
   const notes = state.notes || {};
   $("log").innerHTML = state.log.map((l, i) => `<li>${l}${notes[i] ? `<div class="pnote">✎ ${esc(notes[i])}</div>` : ""}</li>`).reverse().join("");
   save();
@@ -385,17 +388,27 @@ function toast(text, color) {
   toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
 }
 
-// Вопросы на время ожидания шестёрки: вход в игру — тоже практика
-const WAIT_HINTS = [
-  "Пока ждёшь шестёрку: готов ли ты по-настоящему увидеть ответ на свой вопрос?",
-  "Шестёрки нет. Что во мне ещё сопротивляется входу в игру?",
-  "Сделай вдох и выдох. Твоё намерение звучит так же, как в начале, или уточнилось?",
-  "Душа ждёт своего часа, чтобы родиться. Чего я жду в своей жизни?",
-  "Ожидание — тоже урок. Как я обычно переношу паузы в жизни?",
-  "Повтори про себя своё намерение. Что ты почувствовал в теле?",
-  "Если бы ответ на мой вопрос уже пришёл, каким бы он мог быть?",
-  "Чего я боюсь узнать в этой игре?",
-];
+// Напутствия ведущего: колода перемешивается, чтобы не повторяться подряд
+const WISH_KEY = "lila-wish-v1";
+function nextWish() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(WISH_KEY)); } catch (e) {}
+  if (!d || !Array.isArray(d.order) || d.order.length !== WISHES.length || d.i >= d.order.length) {
+    const order = WISHES.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    d = { order, i: 0 };
+  }
+  const w = WISHES[d.order[d.i++]];
+  try { localStorage.setItem(WISH_KEY, JSON.stringify(d)); } catch (e) {}
+  return w;
+}
+function showWish(title) {
+  const el = $("wish");
+  if (!state.wish) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = `<div class="wish-title">🪷 ${esc(state.wish.title)}</div><div class="wish-text">${esc(state.wish.text)}</div><div class="wish-more">ещё напутствие ↻</div>`;
+}
+function setWish(title) { state.wish = { title, text: nextWish() }; showWish(); }
 
 async function roll() {
   if (busy || state.over) return;
@@ -410,7 +423,7 @@ async function roll() {
 
   const who = `<span style="color:${pl.color}">${pl.token} ${esc(pl.name)}</span>`;
   const startPos = pl.pos;
-  let msg, viaCell = null, waitHint = null;
+  let msg, viaCell = null, waitHint = false;
   if (pl.pos < 1) {
     if (v === 6) {
       await stepTo(pl, 1);
@@ -419,7 +432,7 @@ async function roll() {
       msg = `${who}: выпало 6 — Рождение, вход в игру → ${cellName(6)}`;
     } else {
       msg = `${who}: выпало ${v}, для входа нужна 6`;
-      waitHint = WAIT_HINTS[Math.floor(Math.random() * WAIT_HINTS.length)];
+      waitHint = true;
     }
   } else if (pl.pos + v > 72) {
     msg = `${who}: выпало ${v}, ход невозможен — остаётся на ${cellName(pl.pos)}`;
@@ -446,13 +459,17 @@ async function roll() {
     status = `${pl.name} достиг цели!`;
     if (state.players.every((p) => p.done)) state.over = true;
   }
+  state.wish = null;
   if (!state.over) {
     if (v === 6 && !pl.done) status = status || "Выпала 6 — бросайте ещё раз";
     else {
-      if (waitHint) status = waitHint;
       const before = state.turn;
       nextTurn();
-      if (state.turn !== before) toast(`Ход переходит: ${state.players[state.turn].token} ${state.players[state.turn].name}`, state.players[state.turn].color);
+      const multi = state.turn !== before;
+      if (waitHint) setWish(multi ? `${pl.name}, пока ждёшь шестёрку и свой ход` : "Пока ждёшь шестёрку");
+      else if (multi) setWish(`${pl.name}, пока ждёшь своего хода`);
+      else state.wish = null;
+      if (multi) toast(`Ход переходит: ${state.players[state.turn].token} ${state.players[state.turn].name}`, state.players[state.turn].color);
     }
   }
   $("status").textContent = status;
@@ -662,6 +679,7 @@ function startGame() {
   };
   $("setup").close();
   $("status").textContent = "Чтобы войти в игру, выбросьте 6";
+  setWish("Перед первым броском");
   showDie(6);
   $("cellInfo").innerHTML = "";
   render();

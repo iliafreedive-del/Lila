@@ -306,3 +306,12 @@ dialog.card.grow[open]::backdrop { animation: fadein .55s ease; }
   to { clip-path: circle(150vmax at var(--gx) var(--gy)); opacity: 1; }
 }
 @keyframes fadein { from { opacity: 0; } }
+
+/* Напутствие ведущего */
+.wish { margin-top: 12px; padding: 12px 14px; border-radius: 14px; text-align: left; cursor: pointer;
+  background: linear-gradient(135deg, rgba(255,190,90,.12), rgba(180,120,255,.10)); border: 1px solid rgba(255,200,120,.35);
+  animation: wishIn .6s ease; }
+.wish-title { font-size: .8em; letter-spacing: .04em; color: var(--accent); margin-bottom: 6px; }
+.wish-text { white-space: pre-line; line-height: 1.45; font-style: italic; }
+.wish-more { margin-top: 8px; font-size: .75em; color: var(--muted); text-align: right; }
+@keyframes wishIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
