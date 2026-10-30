@@ -64,6 +64,36 @@ function tokenHtml(tk) {
   return `<span class="tkimg" style="background-image:url(img/tokens/sheet-${k + 1}.png);background-position:${(j % 5) * 25}% ${Math.floor(j / 5) * 25}%"></span>`;
 }
 
+/* ---------- Нажатие на клетку: 1-е — приближение, 2-е — толкование ---------- */
+
+let peekN = null;
+function closePeek() {
+  const p = board.querySelector(".peek");
+  if (p) { p.classList.remove("show"); setTimeout(() => p.remove(), 200); }
+  board.querySelectorAll(".cell.peeked").forEach((c) => c.classList.remove("peeked"));
+  peekN = null;
+}
+function tapCell(n) {
+  if (peekN === n) { closePeek(); openCard(n); return; }
+  closePeek();
+  peekN = n;
+  const q = cellPos(n), m = MEANINGS[n] || {};
+  $("c" + n).classList.add("peeked");
+  const el = document.createElement("div");
+  el.className = "peek";
+  // Держим увеличенную клетку внутри поля
+  el.style.left = Math.min(80, Math.max(20, q.x)) + "%";
+  el.style.top = Math.min(78, Math.max(22, q.y)) + "%";
+  el.style.transformOrigin = `${50 + (q.x - Math.min(80, Math.max(20, q.x))) * 2.5}% ${50 + (q.y - Math.min(78, Math.max(22, q.y))) * 2.5}%`;
+  const jump = ARROWS[n] ? `<div class="pk-jump up">↑ стрела на ${ARROWS[n]}</div>` : SNAKES[n] ? `<div class="pk-jump down">↓ змея на ${SNAKES[n]}</div>` : "";
+  el.innerHTML = `<div class="pk-n">${n}</div><div class="pk-name">${CELLS[n][0]}</div><div class="pk-sk">${CELLS[n][1]}</div>
+    ${m.hook ? `<div class="pk-hook">${esc(m.hook)}</div>` : ""}${jump}<div class="pk-more">нажмите ещё раз — толкование</div>`;
+  el.onclick = (e) => { e.stopPropagation(); tapCell(n); };
+  board.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+}
+document.addEventListener("click", (e) => { if (peekN !== null && !e.target.closest(".peek")) closePeek(); });
+
 /* ---------- Поле ---------- */
 
 function buildBoard() {
@@ -80,7 +110,7 @@ function buildBoard() {
       cells += `<div class="cell${n === GOAL ? " goal" : ""}" id="c${n}" data-n="${n}" title="${n}. ${CELLS[n][0]}"></div>`;
     }
     board.innerHTML = `<img class="art-img" src="${t.full}" alt="Поле Лилы"><div class="grid" style="${fullGridStyle(t)}">${cells}</div>`;
-    board.querySelectorAll(".cell").forEach((el) => (el.onclick = () => openCard(+el.dataset.n)));
+    board.querySelectorAll(".cell").forEach((el) => (el.onclick = (e) => { e.stopPropagation(); tapCell(+el.dataset.n); }));
     return;
   }
   document.body.style.background = t.bg;
@@ -107,7 +137,7 @@ function buildBoard() {
   }
   board.innerHTML = `<svg class="art" viewBox="0 0 900 800" preserveAspectRatio="none">${artSvg(t)}</svg>${boardImg(t)}
     <div class="grid">${cells}</div>${overlaySvg(t)}`;
-  board.querySelectorAll(".cell").forEach((el) => (el.onclick = () => openCard(+el.dataset.n)));
+  board.querySelectorAll(".cell").forEach((el) => (el.onclick = (e) => { e.stopPropagation(); tapCell(+el.dataset.n); }));
 }
 
 function overlaySvg(t) {
