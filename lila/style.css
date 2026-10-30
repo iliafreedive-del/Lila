@@ -347,7 +347,7 @@ dialog.card.grow[open] .card-n { animation: numGlow 1.6s ease .3s both; }
 
 /* Плавное листание оформления */
 .car-track { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
-.car-item { content-visibility: auto; contain-intrinsic-size: 100vw 70vh; contain: layout paint; transform: translateZ(0); }
+.car-item { transform: translateZ(0); }
 
 /* ===== Один экран: поле, ход, мысль, игроки, меню внизу ===== */
 #toast { top: auto; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translate(-50%, 180%); }
@@ -410,3 +410,9 @@ nav.bottom #btnNew { color: var(--muted); }
 @media (min-width: 861px) { main { align-items: start; } .panel { height: calc(100svh - 34px); } }
 #toast { top: 30%; bottom: auto; transform: translate(-50%, -50%) scale(.6); opacity: 0; transition: transform .3s, opacity .3s; font-size: 17px; }
 #toast.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+/* Шаг игрока в новой игре помещается в экран */
+.big-token.mid { width: min(30vw, 22svh, 130px); height: min(30vw, 22svh, 130px); font-size: min(19vw, 14svh, 80px); }
+#setup h2 { margin-bottom: 8px; }
+#setup .wiz-q { margin: 8px 0 4px; }
+#setup label { margin-bottom: 6px; }
+#setup .wiz-nav { margin-top: 10px; }
