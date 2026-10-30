@@ -228,3 +228,9 @@ dialog { position: fixed; }
 .x-close:hover { background: var(--accent); color: #2a1a05; }
 dialog#setup .x-close { display: none; }
 @media (max-width: 600px) { dialog.card { font-size: 17px; } }
+.big-token { width: min(60vw, 240px); height: min(60vw, 240px); border-radius: 50%; border: 8px solid; background: #fff; display: grid; place-items: center; font-size: min(36vw, 150px); line-height: 1; }
+.big-token .tkimg { width: 100%; height: 100%; }
+.who { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.who-btn { border: 3px solid; display: flex; align-items: center; gap: 6px; }
+.who-btn .tkimg { width: 22px; height: 22px; }
+.who-btn.sel { background: #ffffff22; outline: 2px solid #fff; }

@@ -444,8 +444,29 @@ function carousel(el, items, current, render, onPick) {
 }
 
 let cars = {};
+let tokenFor = 0;
+const TOKEN_ITEMS = TOKEN_GROUPS.flatMap(([g, list]) => list.map((tk) => ({ tk, name: g })));
+function drawTokenCar() {
+  $("tokenWho").innerHTML = state.players.length > 1 ? state.players.map((p, i) =>
+    `<button type="button" class="who-btn${i === tokenFor ? " sel" : ""}" data-i="${i}" style="border-color:${p.color}">${tokenHtml(p.token)} ${esc(p.name)}</button>`).join("") : "";
+  $("tokenWho").querySelectorAll(".who-btn").forEach((b) => (b.onclick = () => { tokenFor = +b.dataset.i; drawTokenCar(); }));
+  const cur = Math.max(0, TOKENS.indexOf(state.players[tokenFor].token));
+  cars.tokenCar = carousel($("tokenCar"), TOKEN_ITEMS, cur,
+    (it) => `<div class="big-token" style="border-color:${state.players[tokenFor].color}">${tokenHtml(it.tk)}</div>`,
+    (it) => {
+      const me = state.players[tokenFor];
+      if (me.token === it.tk) return;
+      const other = state.players.find((p) => p !== me && p.token === it.tk);
+      if (other) other.token = me.token; // занятую фишку меняем местами
+      me.token = it.tk;
+      render();
+      $("tokenWho").querySelectorAll(".who-btn").forEach((b, i) => (b.innerHTML = `${tokenHtml(state.players[i].token)} ${esc(state.players[i].name)}`));
+    });
+}
 function openLook() {
   $("look").showModal();
+  tokenFor = state.turn || 0;
+  drawTokenCar();
   cars.themeCar = carousel($("themeCar"), THEMES, Math.max(0, THEMES.findIndex((t) => t.id === prefs.theme)),
     (t) => `<div class="big-thumb">${themeThumb(t)}</div>`,
     (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); buildBoard(); render(); } });
@@ -456,6 +477,7 @@ function openLook() {
 document.querySelectorAll("#look .tab").forEach((b) => (b.onclick = () => {
   document.querySelectorAll("#look .tab").forEach((x) => x.classList.toggle("sel", x === b));
   ["themeCar", "diceCar"].forEach((id) => ($(id).hidden = id !== b.dataset.tab));
+  $("tokenPane").hidden = b.dataset.tab !== "tokenCar";
   cars[b.dataset.tab] && cars[b.dataset.tab].refresh();
 }));
 

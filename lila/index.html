@@ -68,10 +68,15 @@
     <div class="tabs">
       <button type="button" class="tab sel" data-tab="themeCar">Поле</button>
       <button type="button" class="tab" data-tab="diceCar">Кубик</button>
+      <button type="button" class="tab" data-tab="tokenCar">Фишка</button>
     </div>
     <div id="themeCar" class="car-wrap"></div>
     <div id="diceCar" class="car-wrap" hidden></div>
-    <p class="hint">Листайте влево и вправо, выбор применяется сразу. Фишку игрока можно сменить, нажав на его имя в списке игроков.</p>
+    <div id="tokenPane" hidden>
+      <div id="tokenWho" class="who"></div>
+      <div id="tokenCar" class="car-wrap"></div>
+    </div>
+    <p class="hint">Листайте влево и вправо, выбор применяется сразу.</p>
     <button class="roll">Готово</button>
   </form>
 </dialog>
