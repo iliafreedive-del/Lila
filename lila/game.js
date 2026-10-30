@@ -285,6 +285,17 @@ function render() {
 
 /* ---------- Ход ---------- */
 
+let toastTimer = null;
+function toast(text, color) {
+  let el = $("toast");
+  if (!el) { el = document.createElement("div"); el.id = "toast"; document.body.appendChild(el); }
+  el.textContent = text;
+  el.style.borderColor = color || "var(--accent)";
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+}
+
 // Вопросы на время ожидания шестёрки: вход в игру — тоже практика
 const WAIT_HINTS = [
   "Пока ждёшь шестёрку: готов ли ты по-настоящему увидеть ответ на свой вопрос?",
@@ -348,8 +359,12 @@ async function roll() {
   }
   if (!state.over) {
     if (v === 6 && !pl.done) status = status || "Выпала 6 — бросайте ещё раз";
-    else if (waitHint) status = waitHint;
-    else nextTurn();
+    else {
+      if (waitHint) status = waitHint;
+      const before = state.turn;
+      nextTurn();
+      if (state.turn !== before) toast(`Ход переходит: ${state.players[state.turn].token} ${state.players[state.turn].name}`, state.players[state.turn].color);
+    }
   }
   busy = false;
   $("status").textContent = status;
