@@ -735,7 +735,8 @@ function startGame() {
   toast(`Первый ход: ${state.players[0].token} ${state.players[0].name}`, state.players[0].color);
 }
 function openSetup() {
-  setupPlayers = state.players.map((p, i) => ({ name: p.name, token: p.token, intention: intentOf(i) }));
+  // Имена и фишки остаются, а намерение в новой игре у каждого новое
+  setupPlayers = state.players.map((p) => ({ name: p.name, token: p.token, intention: "" }));
   wizStep = 0;
   $("setup").showModal();
   drawWiz();
