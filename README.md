@@ -2,6 +2,6 @@
 
 Древняя индийская игра самопознания в браузере.
 
-Играть: https://iliafreedive-del.github.io/lila/lila/
+Играть: https://iliafreedive-del.github.io/Lila/lila/
 
 Игра лежит в папке `lila/` (чистый HTML/CSS/JS, без сборки).
