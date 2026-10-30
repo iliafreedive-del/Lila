@@ -12,6 +12,7 @@
   <h1>Лила <span>игра самопознания</span></h1>
   <nav>
     <button id="btnLook" class="ghost">🎨 Оформление</button>
+    <button id="btnPath" class="ghost">📜 Мой путь</button>
     <button id="btnRules" class="ghost">Правила</button>
     <button id="btnNew" class="ghost">Новая игра</button>
   </nav>
@@ -41,8 +42,17 @@
   <form method="dialog" id="setupForm">
     <h2>Новая игра</h2>
     <label>Ваше намерение (вопрос, с которым вы входите в игру)
-      <textarea id="inIntention" rows="2" placeholder="Например: что мне сейчас важно понять о себе?"></textarea>
+      <textarea id="inIntention" rows="2" placeholder="Например: почему я третий год не решаюсь сменить работу?"></textarea>
     </label>
+    <details class="tips"><summary>Как сформулировать намерение</summary>
+      <p>Хорошее намерение конкретное, про тебя и про сейчас. Его можно начать со слов «что», «как», «почему я».</p>
+      <ul>
+        <li>Слишком общо: «Хочу понять себя». Лучше: «Что мешает мне доверять близким?»</li>
+        <li>Про других: «Как изменить мужа?» Лучше: «Что во мне откликается на его поведение?»</li>
+        <li>Да/нет: «Уходить ли с работы?» Лучше: «Что мне важно в работе, которую я ищу?»</li>
+      </ul>
+      <p>Намерение может уточниться во время игры, и это нормально.</p>
+    </details>
     <div id="nameFields"></div>
     <div class="row">
       <button type="button" id="addPlayer" class="ghost">+ Игрок</button>
@@ -72,6 +82,29 @@
   </form>
 </dialog>
 
+<dialog id="card" class="wide card">
+  <form method="dialog">
+    <div id="cardBody"></div>
+    <label class="note-label">Мои мысли (сохранятся в «Моём пути»)
+      <textarea id="cardNote" rows="3" placeholder="Что эта клетка говорит о моём намерении? Где я узнаю это в своей жизни?"></textarea>
+    </label>
+    <label class="chk"><input type="checkbox" id="autoCard"> Открывать карточку после каждого хода</label>
+    <button class="roll" id="cardClose">Продолжить путь</button>
+  </form>
+</dialog>
+
+<dialog id="pathDlg" class="wide">
+  <form method="dialog">
+    <h2>Мой путь</h2>
+    <div id="pathBody"></div>
+    <div class="row">
+      <button type="button" class="ghost" id="pathCopy">Скопировать</button>
+      <button type="button" class="ghost" id="pathSave">Скачать .txt</button>
+    </div>
+    <button class="roll">Закрыть</button>
+  </form>
+</dialog>
+
 <dialog id="rules">
   <form method="dialog">
     <h2>Правила</h2>
@@ -84,12 +117,19 @@
       <li>Если бросок уводит дальше клетки 72, фишка остаётся на месте.</li>
       <li>Игра заканчивается, когда фишка встаёт точно на клетку 68.</li>
     </ol>
+    <p>После каждого хода открывается карточка клетки: толкование, ведическая цитата, вопросы и практика. Записывайте свои мысли: они собираются в «Моём пути», который можно скачать.</p>
+    <p class="hint">Лила — инструмент размышления, а не предсказание и не замена психологической помощи. Если вопрос даётся тяжело, его можно пропустить.</p>
     <p>Нажмите на любую клетку, чтобы прочитать её смысл. Записывайте, что каждая клетка говорит о вашем намерении: путь сохраняется справа.</p>
     <button class="roll">Понятно</button>
   </form>
 </dialog>
 
 <script src="cells.js"></script>
+<script src="meanings.js"></script>
+<script src="m/m1.js"></script>
+<script src="m/m2.js"></script>
+<script src="m/m3.js"></script>
+<script src="m/m4.js"></script>
 <script src="themes.js"></script>
 <script src="tokens.js"></script>
 <script src="game.js"></script>

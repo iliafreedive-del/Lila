@@ -7,7 +7,7 @@ const board = $("board");
 
 let state = null;
 let busy = false;
-let prefs = { theme: "chakra", dice: "classic" };
+let prefs = { theme: "chakra", dice: "classic", autoCard: true };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem(PREFS_KEY)) || {}); } catch (e) {}
 
 const theme = () => THEMES.find((t) => t.id === prefs.theme) || THEMES[0];
@@ -143,8 +143,90 @@ function showCell(n) {
   let extra = "";
   if (ARROWS[n]) extra = ` <i>Стрела → ${ARROWS[n]} «${CELLS[ARROWS[n]][0]}».</i>`;
   if (SNAKES[n]) extra = ` <i>Змея → ${SNAKES[n]} «${CELLS[SNAKES[n]][0]}».</i>`;
-  $("cellInfo").innerHTML = `<h4>${n}. ${name}</h4><div class="sk">${sk}</div><p>${text}${extra}</p>`;
+  const m = MEANINGS[n];
+  $("cellInfo").innerHTML = `<h4>${n}. ${name}</h4><div class="sk">${sk}</div>
+    <p>${m && m.hook ? esc(m.hook) : text}${extra}</p>
+    <button type="button" class="ghost more">Читать толкование</button>`;
+  $("cellInfo").querySelector(".more").onclick = () => openCard(n);
 }
+
+/* ---------- Карточка клетки ---------- */
+
+let cardCtx = null;
+function cardHtml(n, viaCell) {
+  const [name, sk, short] = CELLS[n];
+  const m = MEANINGS[n] || {};
+  const para = (t) => (t || "").split(/\n+/).filter(Boolean).map((x) => `<p>${esc(x)}</p>`).join("");
+  let via = "";
+  if (viaCell) {
+    const kind = ARROWS[viaCell] ? "Стрела" : "Змея";
+    via = `<div class="via">${kind} с клетки ${viaCell} «${CELLS[viaCell][0]}». ${esc((MEANINGS[viaCell] || {}).hook || CELLS[viaCell][2])}</div>`;
+  }
+  const jump = ARROWS[n] ? `<div class="via up">↑ Стрела ведёт на ${ARROWS[n]} «${CELLS[ARROWS[n]][0]}»</div>`
+    : SNAKES[n] ? `<div class="via down">↓ Змея ведёт на ${SNAKES[n]} «${CELLS[SNAKES[n]][0]}»</div>` : "";
+  return `<div class="card-head"><span class="card-n">${n}</span><div><h2>${name}</h2><div class="sk">${sk}</div></div></div>
+    ${via}${jump}
+    ${m.hook ? `<p class="hook">${esc(m.hook)}</p>` : ""}
+    ${para(m.text) || `<p>${esc(short)}</p>`}
+    ${m.light || m.shadow ? `<div class="ls">${m.light ? `<div><h4>☀ Свет</h4>${para(m.light)}</div>` : ""}${m.shadow ? `<div><h4>☾ Тень</h4>${para(m.shadow)}</div>` : ""}</div>` : ""}
+    ${m.scene ? `<h4>Сцена из жизни</h4><p class="scene">${esc(m.scene)}</p>` : ""}
+    ${m.veda ? `<blockquote>${esc(m.veda)}</blockquote>` : ""}
+    <h4>Вопросы к себе</h4><ul class="qs">
+      <li>Прежде чем читать дальше: что слово «${esc(name)}» значит лично для тебя? Что первое приходит на ум?</li>
+      ${(m.questions || []).map((q) => `<li>${esc(q)}</li>`).join("")}
+      ${state.intention ? `<li class="bridge">Как эта клетка связана с моим намерением: «${esc(state.intention)}»?</li>` : ""}
+    </ul>
+    <p class="hint">Не на все вопросы нужно отвечать. Возьми тот, что откликается сильнее всего.</p>
+    ${m.practice ? `<h4>Практика</h4>${para(m.practice)}` : ""}`;
+}
+function openCard(n, logIdx = null, viaCell = null) {
+  cardCtx = { n, logIdx };
+  $("cardBody").innerHTML = cardHtml(n, viaCell);
+  const note = logIdx !== null ? (state.notes || {})[logIdx] : null;
+  $("cardNote").value = note || "";
+  $("cardNote").parentElement.style.display = logIdx !== null ? "" : "none";
+  $("autoCard").checked = !!prefs.autoCard;
+  $("card").showModal();
+  $("card").scrollTop = 0;
+}
+$("card").addEventListener("close", () => {
+  if (cardCtx && cardCtx.logIdx !== null) {
+    state.notes = state.notes || {};
+    const v = $("cardNote").value.trim();
+    if (v) state.notes[cardCtx.logIdx] = v; else delete state.notes[cardCtx.logIdx];
+    render();
+  }
+});
+$("autoCard").onchange = () => { prefs.autoCard = $("autoCard").checked; savePrefs(); };
+
+/* ---------- Мой путь ---------- */
+
+const strip = (h) => { const d = document.createElement("div"); d.innerHTML = h; return d.textContent; };
+function pathText() {
+  let t = "ЛИЛА — мой путь\n" + (state.intention ? "Намерение: " + state.intention + "\n" : "") + "\n";
+  state.log.forEach((l, i) => {
+    t += (i + 1) + ". " + strip(l) + "\n";
+    if (state.notes && state.notes[i]) t += "   ✎ " + state.notes[i] + "\n";
+  });
+  return t;
+}
+function openPath() {
+  const notes = state.notes || {};
+  $("pathBody").innerHTML = (state.intention ? `<p class="hook">Намерение: ${esc(state.intention)}</p>` : "") +
+    (state.log.length ? `<ol class="path">${state.log.map((l, i) => `<li>${l}${notes[i] ? `<div class="pnote">✎ ${esc(notes[i])}</div>` : ""}</li>`).join("")}</ol>`
+      : "<p>Путь ещё не начался. Бросьте кубик.</p>");
+  $("pathDlg").showModal();
+}
+$("btnPath").onclick = openPath;
+$("pathCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText(pathText()); $("pathCopy").textContent = "Скопировано ✓"; } catch (e) {}
+};
+$("pathSave").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([pathText()], { type: "text/plain;charset=utf-8" }));
+  a.download = "lila-moy-put.txt";
+  a.click();
+};
 
 function render() {
   board.querySelectorAll(".token").forEach((t) => t.remove());
@@ -178,11 +260,24 @@ function render() {
     ? `<span class="win">Игра окончена</span>`
     : `Ходит: <b style="color:${cur.color}">${cur.token} ${esc(cur.name)}</b>`;
   $("btnRoll").disabled = state.over || busy;
-  $("log").innerHTML = state.log.slice().reverse().map((l) => `<li>${l}</li>`).join("");
+  const notes = state.notes || {};
+  $("log").innerHTML = state.log.map((l, i) => `<li>${l}${notes[i] ? `<div class="pnote">✎ ${esc(notes[i])}</div>` : ""}</li>`).reverse().join("");
   save();
 }
 
 /* ---------- Ход ---------- */
+
+// Вопросы на время ожидания шестёрки: вход в игру — тоже практика
+const WAIT_HINTS = [
+  "Пока ждёшь шестёрку: готов ли ты по-настоящему увидеть ответ на свой вопрос?",
+  "Шестёрки нет. Что во мне ещё сопротивляется входу в игру?",
+  "Сделай вдох и выдох. Твоё намерение звучит так же, как в начале, или уточнилось?",
+  "Душа ждёт своего часа, чтобы родиться. Чего я жду в своей жизни?",
+  "Ожидание — тоже урок. Как я обычно переношу паузы в жизни?",
+  "Повтори про себя своё намерение. Что ты почувствовал в теле?",
+  "Если бы ответ на мой вопрос уже пришёл, каким бы он мог быть?",
+  "Чего я боюсь узнать в этой игре?",
+];
 
 async function roll() {
   if (busy || state.over) return;
@@ -196,7 +291,8 @@ async function roll() {
   await sleep(250);
 
   const who = `<span style="color:${pl.color}">${pl.token} ${esc(pl.name)}</span>`;
-  let msg;
+  const startPos = pl.pos;
+  let msg, viaCell = null, waitHint = null;
   if (pl.pos < 1) {
     if (v === 6) {
       await stepTo(pl, 1);
@@ -205,6 +301,7 @@ async function roll() {
       msg = `${who}: выпало 6 — Рождение, вход в игру → ${cellName(6)}`;
     } else {
       msg = `${who}: выпало ${v}, для входа нужна 6`;
+      waitHint = WAIT_HINTS[Math.floor(Math.random() * WAIT_HINTS.length)];
     }
   } else if (pl.pos + v > 72) {
     msg = `${who}: выпало ${v}, ход невозможен — остаётся на ${cellName(pl.pos)}`;
@@ -214,12 +311,14 @@ async function roll() {
     msg = `${who}: выпало ${v} → ${cellName(target)}`;
     const jump = ARROWS[target] || SNAKES[target];
     if (jump) {
+      viaCell = target;
       await sleep(350);
       await stepTo(pl, jump);
       msg += ARROWS[target] ? ` ↑ стрела → ${cellName(jump)}` : ` ↓ змея → ${cellName(jump)}`;
     }
   }
-  state.log.push(msg);
+  const logIdx = state.log.push(msg) - 1;
+  const moved = pl.pos !== startPos;
   if (pl.pos > 0) showCell(pl.pos);
 
   let status = "";
@@ -231,11 +330,13 @@ async function roll() {
   }
   if (!state.over) {
     if (v === 6 && !pl.done) status = status || "Выпала 6 — бросайте ещё раз";
+    else if (waitHint) status = waitHint;
     else nextTurn();
   }
   busy = false;
   $("status").textContent = status;
   render();
+  if (pl.pos > 0 && moved && prefs.autoCard) openCard(pl.pos, logIdx, viaCell);
 }
 
 function nextTurn() {
@@ -334,7 +435,7 @@ $("setupForm").onsubmit = () => {
   state = {
     intention: $("inIntention").value.trim(),
     players: setupPlayers.map((p, i) => ({ name: p.name.trim() || "Игрок " + (i + 1), token: p.token, color: COLORS[i], pos: 0, done: false })),
-    turn: 0, over: false, log: [],
+    turn: 0, over: false, log: [], notes: {},
   };
   $("status").textContent = "Чтобы войти в игру, выбросьте 6";
   showDie(6);

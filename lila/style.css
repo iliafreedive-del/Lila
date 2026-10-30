@@ -157,3 +157,28 @@ dialog li { margin-bottom: 6px; line-height: 1.4; }
 #tokens form > .ghost { margin-top: 14px; }
 
 .win { color: var(--accent); font-weight: bold; }
+
+/* Карточка клетки */
+dialog.card { max-width: 720px; line-height: 1.55; }
+.card-head { display: flex; gap: 14px; align-items: center; margin-bottom: 8px; }
+.card-head h2 { margin: 0; }
+.card-n { font-size: 40px; color: var(--accent); min-width: 56px; text-align: center; border: 2px solid var(--accent); border-radius: 50%; width: 64px; height: 64px; display: grid; place-items: center; flex: none; }
+.card .sk, .cell-info .sk { color: var(--muted); font-style: italic; }
+.hook { font-size: 19px; font-style: italic; color: #ffe7b0; border-left: 3px solid var(--accent); padding-left: 12px; }
+.via { background: #ffffff12; border-radius: 8px; padding: 8px 12px; margin: 8px 0; color: var(--muted); }
+.via.up { color: #ffe082; } .via.down { color: #ff9e9e; }
+.ls { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .ls { grid-template-columns: 1fr; } }
+.ls > div { background: #ffffff0d; border-radius: 10px; padding: 4px 12px; }
+blockquote { margin: 12px 0; padding: 10px 14px; border-left: 3px solid var(--accent); background: #ffffff0a; font-style: italic; color: #f3dcb0; }
+.qs li { margin-bottom: 6px; }
+.note-label { margin-top: 14px; }
+.chk { display: flex !important; gap: 8px; align-items: center; font-size: 14px; }
+.chk input { width: auto; display: inline; margin: 0; }
+.cell-info .more { margin-top: 10px; }
+.pnote { color: #ffe7b0; font-style: italic; margin: 2px 0 6px; }
+.path li { margin-bottom: 6px; }
+.scene { background: #ffffff0d; border-radius: 10px; padding: 10px 12px; }
+.qs li.bridge { color: #ffe7b0; }
+.tips { margin: -4px 0 12px; color: var(--muted); font-size: 14px; }
+.tips summary { cursor: pointer; color: var(--accent); }
