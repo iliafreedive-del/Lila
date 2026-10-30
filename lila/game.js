@@ -268,9 +268,19 @@ async function landing(n, then) {
   cell.classList.add("aura");
   await sleep(1000);
   tapCell(n);
-  await sleep(1300);
+  // Название держится 3 секунды, тонкая золотая полоска показывает, сколько осталось
+  const pk = board.querySelector(".peek");
+  if (pk && then) pk.insertAdjacentHTML("beforeend", `<div class="pk-timer"><i></i></div>`);
+  await sleep(3000);
   cell.classList.remove("aura");
-  if (then) then();
+  // Если толкование уже открыли кнопкой, второй раз не открываем
+  if (then && peekN === n && !$("card").open) {
+    pk && pk.classList.add("bloom");
+    cell.classList.add("burst");
+    await sleep(380);
+    then();
+  }
+  cell.classList.remove("burst");
   closePeek();
 }
 
@@ -283,6 +293,7 @@ function openCard(n, logIdx = null, viaCell = null, pi = state.turn, grow = fals
   $("autoCard").checked = !!prefs.autoCard;
   const dlg = $("card");
   dlg.classList.remove("grow");
+  void dlg.offsetWidth;
   const cell = $("c" + n);
   dlg.showModal();
   if (grow && cell) {

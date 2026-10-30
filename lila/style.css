@@ -315,3 +315,32 @@ dialog.card.grow[open]::backdrop { animation: fadein .55s ease; }
 .wish-text { white-space: pre-line; line-height: 1.45; font-style: italic; }
 .wish-more { margin-top: 8px; font-size: .75em; color: var(--muted); text-align: right; }
 @keyframes wishIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* 3 секунды названия и раскрытие толкования */
+.pk-timer { height: 0.6cqw; margin-top: 1.6cqw; border-radius: 1cqw; background: #ffffff22; overflow: hidden; }
+.pk-timer i { display: block; height: 100%; background: linear-gradient(90deg, #ffd27a, #fff4d6); animation: pkTimer 3s linear forwards; }
+@keyframes pkTimer { from { width: 0; } to { width: 100%; } }
+.peek.bloom { transition: transform .38s cubic-bezier(.5, 0, .7, .4), opacity .38s ease-in, filter .38s; transform: translate(-50%, -50%) scale(1.35); opacity: 0; filter: brightness(1.8) blur(2px); }
+.cell.burst { z-index: 3; animation: burst .45s ease-out forwards; }
+@keyframes burst {
+  from { box-shadow: 0 0 0 0 #fff, 0 0 0 0 var(--accent); }
+  to { box-shadow: 0 0 6cqw 3cqw #fff0, 0 0 20cqw 12cqw #ffd27a00; background-color: rgba(255, 245, 210, .7); }
+}
+dialog.card.grow[open] { animation: grow2 .9s cubic-bezier(.16, 1, .3, 1); }
+dialog.card.grow[open]::backdrop { animation: fadein .9s ease; }
+@keyframes grow2 {
+  0% { clip-path: circle(0 at var(--gx) var(--gy)); opacity: .2; filter: brightness(2) saturate(1.4); }
+  45% { opacity: 1; }
+  100% { clip-path: circle(150vmax at var(--gx) var(--gy)); filter: none; }
+}
+dialog.card.grow[open] #cardBody > * { animation: riseIn .7s cubic-bezier(.2, .8, .3, 1) both; }
+dialog.card.grow[open] #cardBody > *:nth-child(1) { animation-delay: .25s; }
+dialog.card.grow[open] #cardBody > *:nth-child(2) { animation-delay: .35s; }
+dialog.card.grow[open] #cardBody > *:nth-child(3) { animation-delay: .45s; }
+dialog.card.grow[open] #cardBody > *:nth-child(4) { animation-delay: .55s; }
+dialog.card.grow[open] #cardBody > *:nth-child(5) { animation-delay: .65s; }
+dialog.card.grow[open] #cardBody > *:nth-child(n+6) { animation-delay: .75s; }
+dialog.card.grow[open] .card-n { animation: numGlow 1.6s ease .3s both; }
+@keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes numGlow { 0% { text-shadow: 0 0 0 #ffd27a; transform: scale(.6); } 40% { text-shadow: 0 0 24px #ffd27a, 0 0 48px #ffd27a; transform: scale(1.15); } 100% { text-shadow: 0 0 6px #ffd27a66; transform: none; } }
+@media (prefers-reduced-motion: reduce) { dialog.card.grow[open], dialog.card.grow[open] #cardBody > *, .pk-timer i { animation: none; } }
