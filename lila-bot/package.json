@@ -1,0 +1,8 @@
+{
+  "name": "lila-bot",
+  "private": true,
+  "description": "Сервер Лилы: боты Telegram и MAX, оплата звёздами и через ЮKassa",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
