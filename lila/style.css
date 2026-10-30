@@ -437,3 +437,4 @@ nav.bottom #btnGames { flex: 1; }
 [hidden] { display: none !important; }
 .game-row .gr-go { flex: none; width: auto; }
 nav.bottom button { white-space: nowrap; padding: 8px 4px; font-size: 13.5px; }
+.player.shown { outline: 2px dashed #ffffff99; }

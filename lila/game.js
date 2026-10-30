@@ -359,6 +359,7 @@ $("pathSave").onclick = () => {
 
 $("wish").onclick = () => { if (state.wish) setWish(); save(); };
 
+let shownIntent = null;
 function render() {
   board.querySelectorAll(".token").forEach((t) => t.remove());
   board.querySelectorAll(".cell.here").forEach((c) => c.classList.remove("here"));
@@ -377,17 +378,17 @@ function render() {
   });
   if (cur.pos > 0) $("c" + cur.pos).classList.add("here");
 
-  const ci = intentOf(state.turn);
-  $("intention").innerHTML = `<span class="intent-who">${cur.token} Намерение ${state.players.length > 1 ? esc(cur.name) : ""}</span>
-    ${ci ? esc(ci) : "<i>не задано</i>"} <span class="intent-edit">✎ изменить</span>`;
+  // Наверху намерение ходящего или того, на чью строку нажали
+  if (shownIntent !== null && shownIntent >= state.players.length) shownIntent = null;
+  const si = shownIntent ?? state.turn, sp = state.players[si], ci = intentOf(si);
+  $("intention").innerHTML = `${si !== state.turn ? `<b style="color:${sp.color};font-style:normal">${tokenHtml(sp.token)} ${esc(sp.name)}:</b> ` : ""}${ci ? esc(ci) : "<i>намерение не задано</i>"} <span class="intent-edit">✎ изменить</span>`;
   $("players").innerHTML = state.players.map((pl, i) => `
-    <div class="player ${i === state.turn && !state.over ? "active" : ""}" data-i="${i}" title="Нажмите, чтобы сменить фишку">
+    <div class="player ${i === state.turn && !state.over ? "active" : ""}${i === shownIntent && i !== state.turn ? " shown" : ""}" data-i="${i}" title="Нажмите, чтобы увидеть намерение">
       <span class="ptoken" style="border-color:${pl.color}">${tokenHtml(pl.token)}</span>${esc(pl.name)}
       <span class="where">${pl.done ? "🏆 достиг цели" : pl.pos < 1 ? "ждёт шестёрку" : pl.pos + ". " + CELLS[pl.pos][0]}</span>
     </div>`).join("");
   $("players").querySelectorAll(".player").forEach((el) => {
-    el.onclick = () => pickToken(state.players[+el.dataset.i].token, (tk) => { state.players[+el.dataset.i].token = tk; render(); },
-      state.players.filter((_, j) => j !== +el.dataset.i).map((p) => p.token));
+    el.onclick = () => { shownIntent = +el.dataset.i; render(); };
   });
   $("turnName").innerHTML = state.over
     ? `<span class="win">Игра окончена</span>`
@@ -445,6 +446,7 @@ function setWish() {
 
 async function roll() {
   if (busy || state.over) return;
+  shownIntent = null;
   busy = true;
   render();
   const pl = state.players[state.turn];
@@ -584,6 +586,7 @@ function openGames() {
   if (!$("gamesDlg").open) $("gamesDlg").showModal();
 }
 function resumeGame(id) {
+  shownIntent = null;
   const g = loadGames().find((x) => x.id === id);
   if (!g) return;
   storeGame();
@@ -806,6 +809,7 @@ function drawWiz() {
   };
 }
 function startGame() {
+  shownIntent = null;
   state = {
     players: setupPlayers.map((p, i) => ({ name: p.name.trim() || "Игрок " + (i + 1), token: p.token, intention: (p.intention || "").trim(), color: COLORS[i], pos: 0, done: false })),
     turn: 0, over: false, log: [], notes: {}, id: newId(),
@@ -831,13 +835,13 @@ $("setupForm").onsubmit = (e) => e.preventDefault();
 
 // Изменение намерения во время игры
 $("intention").onclick = () => {
-  const p = state.players[state.turn];
+  const p = state.players[shownIntent ?? state.turn];
   $("intentWho").textContent = `${p.token} ${p.name}`;
-  $("intentText").value = intentOf(state.turn);
+  $("intentText").value = intentOf(state.players.indexOf(p));
   $("intentDlg").showModal();
 };
 $("intentSave").onclick = () => {
-  const p = state.players[state.turn], v = $("intentText").value.trim(), old = intentOf(state.turn);
+  const pi = shownIntent ?? state.turn, p = state.players[pi], v = $("intentText").value.trim(), old = intentOf(pi);
   if (v !== old) {
     p.intention = v;
     state.log.push(`<span style="color:${p.color}">${p.token} ${esc(p.name)}</span>: ✎ намерение уточнено: «${esc(v)}»`);
