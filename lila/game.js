@@ -259,15 +259,40 @@ function cardHtml(n, viaCell, pi) {
     <p class="hint">Не на все вопросы нужно отвечать. Возьми тот, что откликается сильнее всего.</p>
     ${m.practice ? `<h4>Практика</h4>${para(m.practice)}` : ""}`;
 }
-function openCard(n, logIdx = null, viaCell = null, pi = state.turn) {
+// После хода: сияние на клетке → крупное название → толкование раскрывается из клетки
+async function landing(n, then) {
+  const cell = $("c" + n);
+  if (!cell) return then && then();
+  const cr = cell.getBoundingClientRect();
+  if (cr.top < 0 || cr.bottom > innerHeight) { board.scrollIntoView({ behavior: "smooth", block: "start" }); await sleep(350); }
+  cell.classList.add("aura");
+  await sleep(1000);
+  tapCell(n);
+  await sleep(1300);
+  cell.classList.remove("aura");
+  if (then) then();
+  closePeek();
+}
+
+function openCard(n, logIdx = null, viaCell = null, pi = state.turn, grow = false) {
   cardCtx = { n, logIdx };
   $("cardBody").innerHTML = cardHtml(n, viaCell, pi);
   const note = logIdx !== null ? (state.notes || {})[logIdx] : null;
   $("cardNote").value = note || "";
   $("cardNote").parentElement.style.display = logIdx !== null ? "" : "none";
   $("autoCard").checked = !!prefs.autoCard;
-  $("card").showModal();
-  $("card").scrollTop = 0;
+  const dlg = $("card");
+  dlg.classList.remove("grow");
+  const cell = $("c" + n);
+  dlg.showModal();
+  if (grow && cell) {
+    // Точка, из которой раскрывается карточка, — центр клетки (в координатах окна карточки)
+    const r = cell.getBoundingClientRect(), d = dlg.getBoundingClientRect();
+    dlg.style.setProperty("--gx", r.left + r.width / 2 - d.left + "px");
+    dlg.style.setProperty("--gy", r.top + r.height / 2 - d.top + "px");
+    dlg.classList.add("grow");
+  }
+  dlg.scrollTop = 0;
 }
 $("card").addEventListener("close", () => {
   if (cardCtx && cardCtx.logIdx !== null) {
@@ -430,10 +455,11 @@ async function roll() {
       if (state.turn !== before) toast(`Ход переходит: ${state.players[state.turn].token} ${state.players[state.turn].name}`, state.players[state.turn].color);
     }
   }
-  busy = false;
   $("status").textContent = status;
   render();
-  if (pl.pos > 0 && moved && prefs.autoCard) openCard(pl.pos, logIdx, viaCell, state.players.indexOf(pl));
+  if (pl.pos > 0 && moved) await landing(pl.pos, prefs.autoCard ? () => openCard(pl.pos, logIdx, viaCell, state.players.indexOf(pl), true) : null);
+  busy = false;
+  render();
 }
 
 function nextTurn() {
