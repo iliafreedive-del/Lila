@@ -93,9 +93,19 @@ function tapCell(n) {
   board.appendChild(el);
   requestAnimationFrame(() => el.classList.add("show"));
 }
+// Клетку ищем по точке касания, сквозь всплывшее окошко: так одним нажатием выбирается любая клетка
+let tapStart = null;
+board.addEventListener("pointerdown", (e) => { tapStart = { x: e.clientX, y: e.clientY }; });
+board.addEventListener("pointerup", (e) => {
+  if (!tapStart || Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) > 12) return;
+  tapStart = null;
+  if (e.target.closest(".pk-more")) return;
+  const cell = document.elementsFromPoint(e.clientX, e.clientY).find((el) => el.classList && el.classList.contains("cell"));
+  if (cell) { e.preventDefault(); tapCell(+cell.dataset.n); } else closePeek();
+});
 // pointerdown, а не click: iOS Safari не присылает click по пустым местам страницы
 document.addEventListener("pointerdown", (e) => {
-  if (peekN !== null && !e.target.closest(".peek") && !e.target.closest(".cell")) closePeek();
+  if (peekN !== null && !e.target.closest("#board")) closePeek();
 }, true);
 
 /* ---------- Поле ---------- */
@@ -114,7 +124,6 @@ function buildBoard() {
       cells += `<div class="cell${n === GOAL ? " goal" : ""}" id="c${n}" data-n="${n}" title="${n}. ${CELLS[n][0]}"></div>`;
     }
     board.innerHTML = `<img class="art-img" src="${t.full}" alt="Поле Лилы"><div class="grid" style="${fullGridStyle(t)}">${cells}</div>`;
-    board.querySelectorAll(".cell").forEach((el) => (el.onclick = (e) => { e.stopPropagation(); tapCell(+el.dataset.n); }));
     return;
   }
   document.body.style.background = t.bg;
@@ -141,7 +150,6 @@ function buildBoard() {
   }
   board.innerHTML = `<svg class="art" viewBox="0 0 900 800" preserveAspectRatio="none">${artSvg(t)}</svg>${boardImg(t)}
     <div class="grid">${cells}</div>${overlaySvg(t)}`;
-  board.querySelectorAll(".cell").forEach((el) => (el.onclick = (e) => { e.stopPropagation(); tapCell(+el.dataset.n); }));
 }
 
 function overlaySvg(t) {
