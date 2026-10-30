@@ -87,12 +87,16 @@ function tapCell(n) {
   el.style.transformOrigin = `${50 + (q.x - Math.min(80, Math.max(20, q.x))) * 2.5}% ${50 + (q.y - Math.min(78, Math.max(22, q.y))) * 2.5}%`;
   const jump = ARROWS[n] ? `<div class="pk-jump up">↑ стрела на ${ARROWS[n]}</div>` : SNAKES[n] ? `<div class="pk-jump down">↓ змея на ${SNAKES[n]}</div>` : "";
   el.innerHTML = `<div class="pk-n">${n}</div><div class="pk-name">${CELLS[n][0]}</div><div class="pk-sk">${CELLS[n][1]}</div>
-    ${m.hook ? `<div class="pk-hook">${esc(m.hook)}</div>` : ""}${jump}<div class="pk-more">нажмите ещё раз — толкование</div>`;
-  el.onclick = (e) => { e.stopPropagation(); tapCell(n); };
+    ${m.hook ? `<div class="pk-hook">${esc(m.hook)}</div>` : ""}${jump}<button type="button" class="pk-more">Читать толкование</button>`;
+  // Карточка пропускает нажатия к клеткам под ней, чтобы можно было выбрать другую
+  el.querySelector(".pk-more").onclick = (e) => { e.stopPropagation(); closePeek(); openCard(n); };
   board.appendChild(el);
   requestAnimationFrame(() => el.classList.add("show"));
 }
-document.addEventListener("click", (e) => { if (peekN !== null && !e.target.closest(".peek")) closePeek(); });
+// pointerdown, а не click: iOS Safari не присылает click по пустым местам страницы
+document.addEventListener("pointerdown", (e) => {
+  if (peekN !== null && !e.target.closest(".peek") && !e.target.closest(".cell")) closePeek();
+}, true);
 
 /* ---------- Поле ---------- */
 
