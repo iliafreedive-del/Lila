@@ -532,7 +532,7 @@ function pickToken(current, cb, taken = []) {
 /* ---------- Оформление ---------- */
 
 function themeThumb(t) {
-  if (t.full) return `<div class="thumb square"><img src="${t.full}" alt=""></div>`;
+  if (t.full) return `<div class="thumb square"><img src="${t.full}" alt="" decoding="async"></div>`;
   let cells = "";
   for (let r = 0; r < 8; r++) for (let c = 0; c < 9; c++) {
     const n = cellAt(r, c);
@@ -564,13 +564,16 @@ function carousel(el, items, current, render, onPick) {
   };
   el.querySelector(".prev").onclick = () => go(idx - 1);
   el.querySelector(".next").onclick = () => go(idx + 1);
-  let t = null;
+  // Название и номер меняются сразу при листании, а выбор применяется, когда лента остановилась
+  let t = null, raf = 0;
   track.onscroll = () => {
-    clearTimeout(t);
-    t = setTimeout(() => {
+    if (!raf) raf = requestAnimationFrame(() => {
+      raf = 0;
       const i = Math.round(track.scrollLeft / track.clientWidth);
-      if (i !== idx && i >= 0 && i < items.length) { idx = i; show(); onPick(items[idx]); }
-    }, 120);
+      if (i !== idx && i >= 0 && i < items.length) { idx = i; show(); }
+    });
+    clearTimeout(t);
+    t = setTimeout(() => onPick(items[idx]), 150);
   };
   show();
   requestAnimationFrame(() => (track.scrollLeft = idx * track.clientWidth));
@@ -578,6 +581,9 @@ function carousel(el, items, current, render, onPick) {
 }
 
 let cars = {};
+// Поле перестраивается после закрытия окна оформления, чтобы листание не подтормаживало
+let boardDirty = false;
+$("look").addEventListener("close", () => { if (boardDirty) { boardDirty = false; buildBoard(); render(); } });
 let tokenFor = 0;
 var TOKEN_ITEMS = TOKEN_GROUPS.flatMap(([g, list]) => list.map((tk) => ({ tk, name: g })));
 function drawTokenCar() {
@@ -603,7 +609,7 @@ function openLook() {
   drawTokenCar();
   cars.themeCar = carousel($("themeCar"), THEMES, Math.max(0, THEMES.findIndex((t) => t.id === prefs.theme)),
     (t) => `<div class="big-thumb">${themeThumb(t)}</div>`,
-    (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); buildBoard(); render(); } });
+    (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); boardDirty = true; } });
   cars.diceCar = carousel($("diceCar"), DICE_SKINS, Math.max(0, DICE_SKINS.findIndex((d) => d.id === prefs.dice)),
     (d) => `<div class="big-die">${dieHtml(5, d)}</div>`,
     (d) => { if (prefs.dice !== d.id) { prefs.dice = d.id; savePrefs(); showDie(state.lastRoll || 6); } });
@@ -673,7 +679,7 @@ function drawWiz() {
       <div id="wizBoard" class="car-wrap"></div>${nav(null, "Начать игру ✦")}`;
     carousel($("wizBoard"), THEMES, Math.max(0, THEMES.findIndex((t) => t.id === prefs.theme)),
       (t) => `<div class="big-thumb">${themeThumb(t)}</div>`,
-      (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); buildBoard(); render(); } });
+      (t) => { if (prefs.theme !== t.id) { prefs.theme = t.id; savePrefs(); boardDirty = true; } });
   }
   const back = $("wizBack"), next = $("wizNext");
   if (back) back.onclick = () => { wizStep--; drawWiz(); };
