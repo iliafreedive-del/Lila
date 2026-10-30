@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Лила — игра самопознания</title>
+<meta name="description" content="Лила — древняя индийская игра самопознания. Играйте онлайн в браузере.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Лила <span>игра самопознания</span></h1>
+  <nav>
+    <button id="btnRules" class="ghost">Правила</button>
+    <button id="btnNew" class="ghost">Новая игра</button>
+  </nav>
+</header>
+
+<main>
+  <section class="board-wrap">
+    <div id="board" class="board"></div>
+  </section>
+
+  <aside class="panel">
+    <div id="intention" class="intention"></div>
+    <div class="turn">
+      <div id="turnName" class="turn-name"></div>
+      <div id="dice" class="dice" aria-live="polite">🎲</div>
+      <button id="btnRoll" class="roll">Бросить кубик</button>
+      <div id="status" class="status"></div>
+    </div>
+    <div id="players" class="players"></div>
+    <div id="cellInfo" class="cell-info"></div>
+    <h3>Путь</h3>
+    <ol id="log" class="log" reversed></ol>
+  </aside>
+</main>
+
+<dialog id="setup">
+  <form method="dialog" id="setupForm">
+    <h2>Новая игра</h2>
+    <label>Ваше намерение (вопрос, с которым вы входите в игру)
+      <textarea id="inIntention" rows="2" placeholder="Например: что мне сейчас важно понять о себе?"></textarea>
+    </label>
+    <div id="nameFields"></div>
+    <div class="row">
+      <button type="button" id="addPlayer" class="ghost">+ Игрок</button>
+      <button type="button" id="delPlayer" class="ghost">− Игрок</button>
+    </div>
+    <button type="submit" class="roll">Начать</button>
+  </form>
+</dialog>
+
+<dialog id="rules">
+  <form method="dialog">
+    <h2>Правила</h2>
+    <p>Лила — древняя индийская игра самопознания. Поле из 72 клеток — это карта состояний сознания. Цель — клетка 68, «Космическое сознание».</p>
+    <ol>
+      <li>Перед игрой сформулируйте намерение: вопрос, с которым вы входите в игру.</li>
+      <li>Чтобы войти в игру, нужно выбросить 6. Тогда фишка проходит через Рождение (1) и встаёт на клетку 6 «Заблуждение».</li>
+      <li>Выпавшая 6 даёт право бросить ещё раз.</li>
+      <li>Стрела у основания поднимает вверх, к её острию. Голова змеи опускает вниз, к её хвосту.</li>
+      <li>Если бросок уводит дальше клетки 72, фишка остаётся на месте.</li>
+      <li>Игра заканчивается, когда фишка встаёт точно на клетку 68.</li>
+    </ol>
+    <p>Нажмите на любую клетку, чтобы прочитать её смысл. Записывайте, что каждая клетка говорит о вашем намерении: путь сохраняется справа.</p>
+    <button class="roll">Понятно</button>
+  </form>
+</dialog>
+
+<script src="cells.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
