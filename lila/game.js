@@ -614,6 +614,22 @@ document.querySelectorAll("dialog").forEach((d) => {
   d.prepend(x);
 });
 
+// Подсказка про экран «Домой», если игра открыта в обычном браузере
+(function homeTip() {
+  const standalone = matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || navigator.standalone;
+  let hidden = false;
+  try { hidden = localStorage.getItem("lila-hometip") === "1"; } catch (e) {}
+  if (standalone || hidden || !/iPhone|iPad|Android/i.test(navigator.userAgent)) return;
+  const ios = /iPhone|iPad/i.test(navigator.userAgent);
+  const el = document.createElement("div");
+  el.className = "home-tip";
+  el.innerHTML = `<button type="button" aria-label="Скрыть">✕</button><b>Играть на весь экран:</b> ${ios
+    ? "нажмите «Поделиться» ⬆︎ внизу Safari и выберите «На экран Домой». Откройте Лилу с иконки."
+    : "откройте меню браузера ⋮ и выберите «Добавить на главный экран». Откройте Лилу с иконки."}`;
+  el.querySelector("button").onclick = () => { el.remove(); try { localStorage.setItem("lila-hometip", "1"); } catch (e) {} };
+  document.querySelector(".panel").prepend(el);
+})();
+
 $("btnRoll").onclick = roll;
 $("btnNew").onclick = openSetup;
 $("btnLook").onclick = openLook;

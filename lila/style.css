@@ -256,3 +256,11 @@ dialog { position: fixed; }
 .big-token.mid { width: min(42vw, 170px); height: min(42vw, 170px); font-size: min(26vw, 105px); border-width: 6px; }
 #wizToken .car-info { margin: 6px 4px; }
 #intentDlg textarea { font-size: 17px; }
+
+/* Полноэкранный режим с экрана «Домой»: отступы под вырез и полоску жестов */
+body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+dialog.full { padding-top: max(14px, env(safe-area-inset-top)); padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+#toast { top: calc(18px + env(safe-area-inset-top)); }
+.home-tip { padding-right: 36px !important; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; padding: 10px 12px; font-size: 14px; color: var(--muted); position: relative; }
+.home-tip b { color: var(--accent); font-weight: normal; }
+.home-tip button { position: absolute; top: 4px; right: 6px; background: none; border: none; font-size: 18px; color: var(--muted); padding: 4px 8px; }
